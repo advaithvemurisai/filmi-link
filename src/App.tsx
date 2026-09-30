@@ -1,19 +1,32 @@
 import { useCallback, useEffect, useState } from 'react'
 import Game from './components/Game'
 import Landing from './components/Landing'
+import { PlayerBadge } from './components/Bits'
 import { Archive, HowTo, Stats } from './components/Modals'
+import { AccountSheet, FriendsSheet } from './components/Social'
 import { buildIndex, isValidChain, randomPuzzle, type GraphData, type Index } from './lib/graph'
 import { localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import {
-  loadProgress, loadResults, loadSettings, saveProgress, saveResult, saveSettings, type Result,
+  computeStats, loadProgress, loadResults, loadSettings, saveProgress, saveResults, saveSettings, type Result,
 } from './lib/storage'
+import { loadAccount, saveAccount, sync, SyncError, type Account } from './lib/account'
 
 type Mode = { kind: 'daily'; date: string } | { kind: 'free'; puzzle: PuzzleDef; n: number }
-type Sheet = 'how' | 'stats' | 'archive' | null
+type Sheet = 'how' | 'stats' | 'archive' | 'account' | 'friends' | null
 
 const BASE = import.meta.env.BASE_URL
 type Route = 'landing' | 'play'
 const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsWith('play') ? 'play' : 'landing')
+
+/** Drop results saved against an older dataset or schedule (ids/puzzles no longer match). */
+function validResults(idx: Index, file: PuzzleFile, results: Record<string, Result>) {
+  const valid: Record<string, Result> = {}
+  for (const [d, r] of Object.entries(results)) {
+    const pz = puzzleFor(file, d)
+    if (pz && r.par === pz.par && isValidChain(idx, r.path, pz.s, r.gaveUp ? undefined : pz.e)) valid[d] = r
+  }
+  return valid
+}
 
 function validProgress(idx: Index, date: string, start: string) {
   const p = loadProgress(date)
@@ -30,6 +43,8 @@ export default function App() {
   const [results, setResults] = useState<Record<string, Result>>(loadResults)
   const [settings, setSettings] = useState(loadSettings)
   const [route, setRoute] = useState<Route>(routeFromPath)
+  const [account, setAccount] = useState<Account | null>(loadAccount)
+  const [welcome, setWelcome] = useState<string | null>(null)
 
   useEffect(() => {
     const onPop = () => setRoute(routeFromPath())
@@ -52,16 +67,36 @@ export default function App() {
         const index = buildIndex(g)
         setIdx(index)
         setFile(p)
-        // Drop results saved against an older dataset or schedule (ids/puzzles no longer match).
-        const valid: Record<string, Result> = {}
-        for (const [d, r] of Object.entries(loadResults())) {
-          const pz = puzzleFor(p, d)
-          if (pz && r.par === pz.par && isValidChain(index, r.path, pz.s, r.gaveUp ? undefined : pz.e)) valid[d] = r
-        }
-        setResults(valid)
+        setResults(validResults(index, p, loadResults()))
       })
       .catch(() => setError('Could not load film data.'))
   }, [])
+
+  /** Push local results up and adopt the merged set (server keeps the first result per day). */
+  const pushResults = useCallback(
+    (local: Record<string, Result>) => {
+      if (!account || !idx || !file) return
+      sync(account, local)
+        .then((r) => {
+          const merged = validResults(idx, file, { ...local, ...r.results })
+          saveResults(merged)
+          setResults(merged)
+        })
+        .catch((e) => {
+          if (e instanceof SyncError && e.status === 401) {
+            saveAccount(null)
+            setAccount(null)
+          }
+        })
+    },
+    [account, idx, file],
+  )
+
+  // Sync once the data is in, so another device's results show up here.
+  useEffect(() => {
+    if (idx && file && account) pushResults(validResults(idx, file, loadResults()))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, file, account?.token])
 
   // First time someone reaches the game, show How to play.
   useEffect(() => {
@@ -83,6 +118,8 @@ export default function App() {
     },
     [idx],
   )
+
+  const streak = computeStats(results, today).streak
 
   if (route === 'landing') {
     return (
@@ -120,25 +157,33 @@ export default function App() {
           <span>Cinematic<em>Link</em></span>
         </button>
         <nav>
-          <button className={`nav-btn ${mode.kind === 'daily' && mode.date === today ? 'on' : ''}`}
-            onClick={() => setMode({ kind: 'daily', date: today })}>Daily</button>
-          <button className={`nav-btn ${mode.kind === 'free' ? 'on' : ''}`} onClick={() => playRandom(3)}>Random</button>
-          <button className="nav-btn" onClick={() => setSheet('archive')}>Archive</button>
-          <button className="nav-btn" onClick={() => setSheet('stats')}>Stats</button>
+          <NavBtn icon="📅" label="Daily" on={mode.kind === 'daily' && mode.date === today} onClick={() => setMode({ kind: 'daily', date: today })} />
+          <NavBtn icon="🎲" label="Random" on={mode.kind === 'free'} onClick={() => playRandom(3)} />
+          <NavBtn icon="🗂" label="Archive" onClick={() => setSheet('archive')} />
+          <NavBtn icon="📊" label="Stats" onClick={() => setSheet('stats')} />
+          <NavBtn icon="🏆" label="Friends" onClick={() => setSheet('friends')} />
           <button className="icon-btn" onClick={() => setSheet('how')} aria-label="How to play">?</button>
-          <label className="toggle" title="No hints, no film counts">
+          <label className={`toggle ${settings.hard ? 'on' : ''}`} title="Hard mode: no hints, no signal bars">
             <input type="checkbox" checked={settings.hard} onChange={toggleHard} />
-            <span>Hard</span>
+            <span>🔥 Hard</span>
           </label>
         </nav>
+        <button className={`player-pill ${account ? '' : 'is-anon'}`} onClick={() => setSheet('account')}
+          title={account ? `Signed in as ${account.name}` : 'Save your streak'}>
+          <span className={`pill-flame ${streak ? '' : 'is-cold'}`} aria-hidden>🔥</span>
+          <b>{streak}</b>
+          {account ? <PlayerBadge name={account.name} size="sm" /> : <span className="pill-cta">Save</span>}
+        </button>
       </header>
+
+      {welcome && <div className="toast" role="status" onAnimationEnd={() => setWelcome(null)}>{welcome}</div>}
 
       {mode.kind === 'free' && (
         <div className="free-bar">
-          New random chain:
-          <button onClick={() => playRandom(2)}>Easy</button>
-          <button onClick={() => playRandom(3)}>Medium</button>
-          <button onClick={() => playRandom(4)}>Hard</button>
+          <span aria-hidden>🎲</span>
+          <button onClick={() => playRandom(2)}><i className="lvl" data-l="1" /> Easy</button>
+          <button onClick={() => playRandom(3)}><i className="lvl" data-l="2" /> Medium</button>
+          <button onClick={() => playRandom(4)}><i className="lvl" data-l="3" /> Hard</button>
         </div>
       )}
 
@@ -155,12 +200,16 @@ export default function App() {
           onProgress={(p) => mode.kind === 'daily' && saveProgress(mode.date, p)}
           onFinish={(r) => {
             if (mode.kind !== 'daily') return
-            const full = { ...r, live: mode.date === today }
-            saveResult(mode.date, full)
-            setResults((prev) => ({ ...prev, [mode.date]: full }))
+            const next = { ...results, [mode.date]: { ...r, live: mode.date === today } }
+            saveResults(next)
+            setResults(next)
+            pushResults(next)
           }}
           onNewRandom={playRandom}
           onOpenArchive={() => setSheet('archive')}
+          player={account?.name ?? null}
+          onSaveStreak={() => setSheet('account')}
+          onOpenFriends={() => setSheet('friends')}
         />
       ) : (
         <div className="splash">The first daily puzzle hasn't dropped yet.</div>
@@ -175,11 +224,38 @@ export default function App() {
       </footer>
 
       {sheet === 'how' && <HowTo idx={idx} onClose={() => setSheet(null)} />}
-      {sheet === 'stats' && <Stats results={results} today={today} onClose={() => setSheet(null)} />}
+      {sheet === 'stats' && <Stats results={results} today={today} synced={!!account} onClose={() => setSheet(null)} />}
+      {sheet === 'account' && (
+        <AccountSheet
+          account={account} results={results} streak={streak} onClose={() => setSheet(null)}
+          onSignedIn={(a, merged, created) => {
+            saveAccount(a)
+            setAccount(a)
+            const all = validResults(idx, file, { ...results, ...merged })
+            saveResults(all)
+            setResults(all)
+            setSheet(null)
+            setWelcome(created ? `🎬 Welcome, ${a.name}! Your streak is saved.` : `👋 Welcome back, ${a.name}`)
+          }}
+          onSignOut={() => { saveAccount(null); setAccount(null); setSheet(null) }}
+        />
+      )}
+      {sheet === 'friends' && (
+        <FriendsSheet account={account} today={today} onClose={() => setSheet(null)} onSignIn={() => setSheet('account')} />
+      )}
       {sheet === 'archive' && (
         <Archive idx={idx} file={file} today={today} results={results} onClose={() => setSheet(null)}
           onPick={(d) => { setMode({ kind: 'daily', date: d }); setSheet(null) }} />
       )}
     </div>
+  )
+}
+
+function NavBtn({ icon, label, on, onClick }: { icon: string; label: string; on?: boolean; onClick: () => void }) {
+  return (
+    <button className={`nav-btn ${on ? 'on' : ''}`} onClick={onClick} title={label}>
+      <span className="nav-ic" aria-hidden>{icon}</span>
+      <span className="nav-label">{label}</span>
+    </button>
   )
 }

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Chain, LangTag, Modal } from './Bits'
+import { Filmstrip, LangTag, Modal, ParMeter, Poster } from './Bits'
 import { randomPuzzle, shortestPath, type Index } from '../lib/graph'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 import { computeStats, type Result } from '../lib/storage'
@@ -15,41 +15,62 @@ export function HowTo({ idx, onClose }: { idx: Index; onClose: () => void }) {
 
   return (
     <Modal title="How to play" onClose={onClose}>
-      <ol className="howto">
-        <li>You get a <b>start</b> film and a <b>target</b> film, often from different industries.</li>
-        <li>Open the start film and pick an actor, director or music composer who worked on it.</li>
-        <li>From that person, jump to another film they worked on. Keep going until you reach the target.</li>
-        <li>Each person you pass through is one <b>link</b>. <b>Par</b> is the fewest links possible.</li>
+      <ol className="howto-steps">
+        <li><span aria-hidden>🎞️ → 🎯</span><b>Link two films</b><small>A start and a target</small></li>
+        <li><span aria-hidden>🎞️ 👤 🎞️</span><b>Hop through people</b><small>Actors, directors, composers</small></li>
+        <li><span aria-hidden>⛳</span><b>Beat par</b><small>Each person is one link</small></li>
       </ol>
       {example && (
         <>
           <p className="kicker">Example: a 2-link chain</p>
-          <Chain idx={idx} path={example} />
+          <Filmstrip idx={idx} path={example} replay />
         </>
       )}
-      <ul className="howto-notes">
-        <li>Click any chip in your chain to rewind to that point. Back and rewinds are free.</li>
-        <li>💡 Hints reveal the next step on a shortest route. They show up in your share.</li>
-        <li><b>Hard mode</b> turns off hints and hides how many other films each person has.</li>
-        <li>A new daily puzzle drops at midnight. Weekdays start easy; weekends are harder.</li>
+      <ul className="howto-legend">
+        <li><span className="legend-card is-win" aria-hidden>🎯</span> Leads straight to the target</li>
+        <li><span className="reach" aria-hidden><i className="on" /><i className="on" /><i className="on" /><i /><i /></span> How many other films they have</li>
+        <li><span aria-hidden>🎬 🎵</span> Director / music composer</li>
+        <li><span aria-hidden>↶</span> Back and rewinds are free. Tap any frame to rewind</li>
+        <li><span aria-hidden>💡</span> Hints show the next step; they appear in your share</li>
+        <li><span aria-hidden>🔥</span> <b>Hard mode</b>: no hints, no signal bars</li>
       </ul>
     </Modal>
   )
 }
 
-export function Stats({ results, today, onClose }: { results: Record<string, Result>; today: string; onClose: () => void }) {
+export function Stats({
+  results, today, synced, onClose,
+}: { results: Record<string, Result>; today: string; synced: boolean; onClose: () => void }) {
   const s = computeStats(results, today)
   const buckets = ['Par', '+1', '+2', '+3+']
   const max = Math.max(1, ...buckets.map((b) => s.overPar[b] ?? 0))
+  // Five weeks ending this week, Monday-first, like a contributions calendar.
+  const lead = (new Date(today + 'T00:00').getDay() + 6) % 7
+  const days = Array.from({ length: 35 }, (_, i) => addDays(today, i - 28 - lead))
   return (
     <Modal title="Your stats" onClose={onClose}>
+      <div className="streak-hero">
+        <span className={`streak-flame ${s.streak ? '' : 'is-cold'}`} aria-hidden>🔥</span>
+        <div>
+          <b>{s.streak}</b>
+          <span>day streak · best {s.best}</span>
+        </div>
+      </div>
       <div className="stats-grid">
         <div><b>{s.played}</b><span>Played</span></div>
         <div><b>{s.played ? Math.round((s.solved / s.played) * 100) : 0}%</b><span>Solved</span></div>
-        <div><b>{s.streak}</b><span>Streak</span></div>
-        <div><b>{s.best}</b><span>Best streak</span></div>
+        <div><b>{s.atPar}</b><span>At par</span></div>
       </div>
-      <p className="kicker">Links vs par</p>
+      <div className="heat" aria-label="Last five weeks">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} className="heat-dow">{d}</span>)}
+        {days.map((d) => {
+          const r = results[d]
+          const future = d > today
+          const cls = future ? 'is-future' : !r ? '' : r.gaveUp ? 'is-lost' : r.links <= r.par ? 'is-par' : 'is-won'
+          return <i key={d} className={`${cls} ${d === today ? 'is-today' : ''}`} title={d} />
+        })}
+      </div>
+      <p className="heat-key"><i className="is-par" /> par <i className="is-won" /> solved <i className="is-lost" /> gave up</p>
       <div className="dist">
         {buckets.map((b) => (
           <div className="dist-row" key={b}>
@@ -60,7 +81,9 @@ export function Stats({ results, today, onClose }: { results: Record<string, Res
           </div>
         ))}
       </div>
-      <p className="fine">Streaks count daily puzzles solved on their own day. Stats are stored in this browser only.</p>
+      <p className="fine">
+        Streaks count daily puzzles solved on their own day. {synced ? 'Synced to your player.' : 'Stored in this browser only.'}
+      </p>
     </Modal>
   )
 }
@@ -83,19 +106,23 @@ export function Archive({
         {dates.map((d) => {
           const p = puzzleFor(file, d)!
           const r = results[d]
-          const status = !r ? '' : r.gaveUp ? '✕' : r.links <= r.par ? '★' : '✓'
           return (
             <li key={d}>
               <button onClick={() => onPick(d)}>
-                <span className="archive-no">#{puzzleNumber(file, d)}</span>
+                <span className="archive-pair" aria-hidden>
+                  <Poster idx={idx} id={p.s} size="sm" />
+                  <Poster idx={idx} id={p.e} size="sm" />
+                </span>
                 <span className="archive-main">
                   <span>{idx.data.films[p.s].t} → {idx.data.films[p.e].t}</span>
                   <span className="archive-sub">
-                    {new Date(d + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-                    {' · '}par {p.par} · <LangTag l={idx.data.films[p.s].l} /> <LangTag l={idx.data.films[p.e].l} />
+                    #{puzzleNumber(file, d)} · {new Date(d + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                    {' '}<LangTag l={idx.data.films[p.s].l} /> <LangTag l={idx.data.films[p.e].l} />
                   </span>
                 </span>
-                <span className={`archive-status ${status === '★' ? 'gold' : ''}`}>{status}</span>
+                <span className="archive-status">
+                  {!r ? <ParMeter links={0} par={p.par} /> : r.gaveUp ? '🏳️' : <ParMeter links={r.links} par={r.par} />}
+                </span>
               </button>
             </li>
           )

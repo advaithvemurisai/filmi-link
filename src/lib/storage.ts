@@ -31,9 +31,7 @@ const write = (k: string, v: unknown) => {
 }
 
 export const loadResults = () => read<Record<string, Result>>('fl:results', {})
-export function saveResult(dateKey: string, r: Result) {
-  write('fl:results', { ...loadResults(), [dateKey]: r })
-}
+export const saveResults = (all: Record<string, Result>) => write('fl:results', all)
 
 export const loadProgress = (dateKey: string) => read<Progress | null>(`fl:progress:${dateKey}`, null)
 export const saveProgress = (dateKey: string, p: Progress) => write(`fl:progress:${dateKey}`, p)
@@ -41,7 +39,10 @@ export const saveProgress = (dateKey: string, p: Progress) => write(`fl:progress
 export const loadSettings = () => read<Settings>('fl:settings', { hard: false })
 export const saveSettings = (s: Settings) => write('fl:settings', s)
 
-export function computeStats(results: Record<string, Result>, today: string) {
+/** The parts of a result stats need (friends' results arrive without their chains). */
+export type Score = Pick<Result, 'links' | 'par' | 'gaveUp' | 'live'>
+
+export function computeStats(results: Record<string, Score>, today: string) {
   const entries = Object.values(results)
   const solved = entries.filter((r) => !r.gaveUp)
   const isWin = (d: string) => !!results[d] && !results[d].gaveUp && results[d].live
