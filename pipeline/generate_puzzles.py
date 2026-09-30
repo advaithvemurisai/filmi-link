@@ -5,7 +5,11 @@ people ("links") — matches a weekday difficulty curve: easy early in the week,
 harder at the weekend. Every puzzle is verified solvable by BFS, and `par` is
 the optimal number of links.
 
-Usage: python pipeline/generate_puzzles.py [--days 730] [--epoch 2026-09-29] [--seed 7]
+Usage: python pipeline/generate_puzzles.py [--days 730] [--epoch 2026-09-01] [--seed 7]
+
+Already-published puzzles (up to --keep-until, default tomorrow) are kept when an existing
+puzzles.json has the same epoch, so a data refresh never changes today's or past puzzles.
+Their par is recomputed against the new graph (new films can only make chains shorter).
 """
 
 import argparse
@@ -46,6 +50,7 @@ def main() -> None:
     ap.add_argument("--days", type=int, default=730)
     ap.add_argument("--epoch", default=date.today().isoformat())
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--keep-until", default=(date.today() + timedelta(days=1)).isoformat())
     args = ap.parse_args()
 
     graph = load_graph()
@@ -58,7 +63,22 @@ def main() -> None:
     last_used: dict[str, int] = {}
     puzzles = []
 
-    for day in range(args.days):
+    kept = 0
+    if PUZZLES_PATH.exists():
+        old = json.loads(PUZZLES_PATH.read_text())
+        if old.get("epoch") == args.epoch:
+            keep_days = (date.fromisoformat(args.keep_until) - epoch).days + 1
+            for day, p in enumerate(old["puzzles"][:max(0, keep_days)]):
+                if p["s"] not in films or p["e"] not in films:
+                    break
+                d = link_distances(p["s"], film_people, person_films).get(p["e"])
+                if d is None:
+                    break
+                puzzles.append({"s": p["s"], "e": p["e"], "par": d})
+                last_used[p["s"]] = last_used[p["e"]] = day
+            kept = len(puzzles)
+
+    for day in range(kept, args.days):
         want = PAR_BY_WEEKDAY[(epoch + timedelta(days=day)).weekday()]
         fresh = [f for f in pool if day - last_used.get(f, -10**9) > COOLDOWN_DAYS] or pool
         for _ in range(200):
@@ -84,7 +104,7 @@ def main() -> None:
     PUZZLES_PATH.write_text(json.dumps({"epoch": args.epoch, "puzzles": puzzles}, separators=(",", ":")))
     pars = Counter(p["par"] for p in puzzles)
     cross = sum(films[p["s"]]["l"] != films[p["e"]]["l"] for p in puzzles)
-    print(f"wrote {PUZZLES_PATH} — {len(puzzles)} puzzles from {args.epoch}")
+    print(f"wrote {PUZZLES_PATH} — {len(puzzles)} puzzles from {args.epoch} ({kept} published puzzles kept)")
     print("par distribution:", dict(sorted(pars.items())), f"| cross-language: {cross / len(puzzles):.0%}")
 
 

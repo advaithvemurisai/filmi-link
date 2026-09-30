@@ -83,7 +83,8 @@ export const linkCount = (path: Node[]) => path.filter((n) => n.kind === 'person
 /** Random solvable puzzle for free play, with par as close to `want` as the graph allows. */
 export function randomPuzzle(idx: Index, want: number, rng = Math.random) {
   const films = Object.keys(idx.data.films).sort((a, b) => idx.data.films[b].pop - idx.data.films[a].pop)
-  const pool = films.slice(0, Math.max(60, Math.floor(films.length * 0.4)))
+  // Endpoints come from well-known films only (matches POOL_SIZE in generate_puzzles.py).
+  const pool = films.slice(0, Math.min(800, Math.max(60, Math.floor(films.length * 0.4))))
   let best: { s: string; e: string; par: number } | null = null
   for (let attempt = 0; attempt < 40; attempt++) {
     const s = pool[Math.floor(rng() * pool.length)]

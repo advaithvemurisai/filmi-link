@@ -72,7 +72,7 @@ export default function App() {
     mode.kind === 'free'
       ? 'Free play'
       : `#${dailyNo}${mode.date === today ? ' · Today' : ''}`
-  const shareTitle = mode.kind === 'free' ? 'FilmiLink · free play 🎬' : `FilmiLink #${dailyNo} 🎬${settings.hard ? ' (hard)' : ''}`
+  const shareTitle = mode.kind === 'free' ? 'CinematicLink · free play 🎬' : `CinematicLink #${dailyNo} 🎬${settings.hard ? ' (hard)' : ''}`
 
   const toggleHard = () => {
     const next = { ...settings, hard: !settings.hard }
@@ -85,7 +85,7 @@ export default function App() {
       <header className="topbar">
         <button className="brand" onClick={() => setMode({ kind: 'daily', date: today })}>
           <span className="reel" aria-hidden />
-          <span>Filmi<em>Link</em></span>
+          <span>Cinematic<em>Link</em></span>
         </button>
         <nav>
           <button className={`nav-btn ${mode.kind === 'daily' && mode.date === today ? 'on' : ''}`}

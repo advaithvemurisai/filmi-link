@@ -136,6 +136,7 @@ export default function Game(props: Props) {
 
           <Chain idx={idx} path={path} onJump={(i) => setPath(path.slice(0, i + 1))} activeIndex={path.length - 1} />
 
+          <div className="board">
           <section className="panel">
             <header className="panel-head">
               {current.kind === 'film' ? (
@@ -214,9 +215,92 @@ export default function Game(props: Props) {
               )}
             </div>
           </section>
+
+          <TargetPanel
+            idx={idx}
+            filmId={puzzle.e}
+            hard={hard}
+            reachable={current.kind === 'film' ? new Set(options.map((o) => o.node.id)) : new Set()}
+            currentTitle={current.kind === 'film' ? films[current.id].t : ''}
+            onPick={(id) => go({ kind: 'person', id })}
+          />
+          </div>
         </>
       )}
     </main>
+  )
+}
+
+/**
+ * The target film's cast & crew, so players can plan the chain from both ends.
+ * People who also worked on the current film are one click from victory: they're highlighted
+ * and clickable (except in hard mode, where they're just listed).
+ */
+function TargetPanel({
+  idx, filmId, hard, reachable, currentTitle, onPick,
+}: {
+  idx: Index
+  filmId: string
+  hard: boolean
+  reachable: Set<string>
+  currentTitle: string
+  onPick: (personId: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 960px)').matches)
+  const f = idx.data.films[filmId]
+  const credits = [...(idx.filmCredits[filmId] ?? [])].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
+  const q = query.trim().toLowerCase()
+  const visible = q ? credits.filter((c) => idx.data.people[c.id].n.toLowerCase().includes(q)) : credits
+
+  return (
+    <details className="panel target-panel" open={open}>
+      <summary className="panel-head">
+        <Poster idx={idx} id={filmId} />
+        <div>
+          <p className="kicker target-kicker">Target · cast &amp; crew</p>
+          <h2>{f.t}</h2>
+          <p className="meta">
+            {f.y} <LangTag l={f.l} /> · {credits.length} people
+          </p>
+          <p className="prompt muted">Work backwards: find one of these people →</p>
+        </div>
+        <span className="chev" aria-hidden>▾</span>
+      </summary>
+      {credits.length > 8 && (
+        <input className="search" placeholder="Filter target's cast & crew…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      )}
+      <div className="options">
+        {visible.map((c) => {
+          const live = !hard && reachable.has(c.id)
+          const others = (idx.personFilms[c.id]?.length ?? 1) - 1
+          const body = (
+            <>
+              <Avatar idx={idx} id={c.id} />
+              <span className="option-main">
+                <span className="option-title">{idx.data.people[c.id].n}</span>
+                <span className="option-sub">{c.role}</span>
+              </span>
+              <span className="option-side">
+                {live ? (
+                  <span className="badge target">Also in {currentTitle}</span>
+                ) : (
+                  !hard && <span className={`count ${others === 0 ? 'dead' : ''}`}>
+                    {others === 0 ? 'no other films' : `${others} other film${others > 1 ? 's' : ''}`}
+                  </span>
+                )}
+              </span>
+            </>
+          )
+          return live ? (
+            <button key={c.id + c.role} className="option is-target" onClick={() => onPick(c.id)}>{body}</button>
+          ) : (
+            <div key={c.id + c.role} className="option static">{body}</div>
+          )
+        })}
+        {!visible.length && <p className="empty">Nothing matches “{query}”.</p>}
+      </div>
+    </details>
   )
 }
 

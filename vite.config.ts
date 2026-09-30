@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// GitHub Pages serves the app from /filmi-link/; override with BASE_PATH=/ for Vercel/Netlify.
+// Served from the domain root on Vercel. The GitHub Pages mirror builds with BASE_PATH=/filmi-link/.
 export default defineConfig({
-  base: process.env.BASE_PATH ?? '/filmi-link/',
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react()],
 })

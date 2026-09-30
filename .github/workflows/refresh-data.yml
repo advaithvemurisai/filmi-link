@@ -1,0 +1,54 @@
+name: Refresh TMDb data
+
+# Weekly rebuild of the film graph + puzzle schedule in the cloud. Vercel redeploys on the commit.
+on:
+  schedule:
+    - cron: "30 20 * * 0"   # Sundays 20:30 UTC = Mondays 02:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Fetch every Indian film from TMDb
+        env:
+          TMDB_READ_TOKEN: ${{ secrets.TMDB_READ_TOKEN }}
+        run: python pipeline/fetch_tmdb.py
+
+      - name: Extend puzzle schedule (published puzzles are kept)
+        run: python pipeline/generate_puzzles.py --epoch 2026-09-01
+
+      - name: Verify
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      - name: Commit if data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "data: weekly TMDb refresh ($(date -u +%F))"
+            git push
+          fi

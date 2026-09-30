@@ -62,7 +62,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 p { margin: 0; }
 
-.app { max-width: 780px; margin: 0 auto; padding: 0 16px 48px; }
+.app { max-width: 1120px; margin: 0 auto; padding: 0 16px 48px; }
 
 /* ---------- top bar ---------- */
 .topbar {
@@ -306,3 +306,25 @@ nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .crash > div { max-width: 420px; display: grid; gap: 12px; justify-items: start; }
 .crash h2 { font-size: 26px; color: var(--text); }
 .crash pre { font-size: 12px; color: var(--faint); white-space: pre-wrap; margin: 0; }
+
+/* ---------- two-column board: current step + target's cast & crew ---------- */
+.board { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 960px) {
+  .board { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  .target-panel { position: sticky; top: 16px; }
+  .target-panel summary { pointer-events: none; }
+  .target-panel .chev { display: none; }
+}
+.target-panel summary { list-style: none; cursor: pointer; }
+.target-panel summary::-webkit-details-marker { display: none; }
+.target-panel .panel-head { position: relative; }
+.target-panel:not([open]) .panel-head { border-bottom: 0; }
+.target-kicker { color: var(--accent); }
+.prompt.muted { color: var(--muted); }
+.chev { margin-left: auto; color: var(--muted); font-size: 18px; transition: transform .15s; }
+.target-panel[open] .chev { transform: rotate(180deg); }
+.option.static { cursor: default; }
+.option.static:hover { background: none; }
+@media (max-width: 959px) {
+  .target-panel { order: -1; }  /* collapsed summary sits above the long current list */
+}

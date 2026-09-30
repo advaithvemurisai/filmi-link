@@ -5,8 +5,8 @@ Auth (either works), via environment or a git-ignored .env at the repo root:
   TMDB_API_KEY=...      # v3 key
 
 Usage:
-  python pipeline/fetch_tmdb.py            # default per-language quotas
-  python pipeline/fetch_tmdb.py --scale 0.5
+  python pipeline/fetch_tmdb.py              # every Indian film with >= MIN_VOTES votes
+  python pipeline/fetch_tmdb.py --limit 50   # quick trial
 
 Raw responses are cached in pipeline/.cache so reruns are cheap.
 This product uses the TMDb API but is not endorsed or certified by TMDb.
@@ -33,10 +33,14 @@ from graph_io import write_graph
 API = "https://api.themoviedb.org/3"
 CACHE = Path(__file__).resolve().parent / ".cache"
 
-# Films per original language, ranked by TMDb vote count.
-QUOTAS = {"hi": 900, "ta": 600, "te": 600, "ml": 500, "kn": 250, "mr": 100, "bn": 100}
-MIN_VOTES = 5
+# Indian languages to pull. No per-language cap: every film with at least MIN_VOTES votes is kept.
+# Obscure films only ever appear mid-chain; puzzle endpoints come from the most-voted films.
+LANGUAGES = ["hi", "ta", "te", "ml", "kn", "mr", "bn", "pa", "gu", "or", "as"]
+MIN_VOTES = 1
 CAST_PER_FILM = 12
+# Films outside the most-voted FULL_CREDITS_TOP only appear mid-chain; there, people with no other
+# film can't connect anything, so they're pruned to keep graph.json small for phones.
+FULL_CREDITS_TOP = 1500
 # Music credits by priority: TMDb lists arrangers/one-song contributors under the looser jobs,
 # so only fall back to them when a film has no "Original Music Composer".
 MUSIC_JOBS = ["Original Music Composer", "Music Director", "Music"]
@@ -162,7 +166,7 @@ def display_title(d: dict) -> str:
     return best if score(best) >= 0.6 and score(best) - score(d["title"]) > 0.25 else d["title"]
 
 
-def discover(lang: str, quota: int) -> list[dict]:
+def discover(lang: str, quota: float) -> list[dict]:
     out, page = [], 1
     while len(out) < quota:
         res = get(
@@ -178,7 +182,7 @@ def discover(lang: str, quota: int) -> list[dict]:
         if page >= min(res.get("total_pages", 1), 500):
             break
         page += 1
-    return out[:quota]
+    return out if quota == float("inf") else out[: int(quota)]
 
 
 def main() -> None:
@@ -186,17 +190,17 @@ def main() -> None:
         sys.exit("Set TMDB_READ_TOKEN or TMDB_API_KEY (free at themoviedb.org/settings/api).")
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scale", type=float, default=1.0, help="multiply every language quota")
+    ap.add_argument("--limit", type=int, default=None, help="max films per language (quick trial runs)")
     args = ap.parse_args()
 
     ids: dict[int, str] = {}
-    for lang, quota in QUOTAS.items():
-        found = discover(lang, max(1, int(quota * args.scale)))
+    for lang in LANGUAGES:
+        found = discover(lang, args.limit or float("inf"))
         for m in found:
             ids.setdefault(m["id"], lang)
         print(f"{lang}: {len(found)} films")
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    with ThreadPoolExecutor(max_workers=12) as pool:
         details = list(pool.map(lambda mid: get(f"/movie/{mid}", append_to_response="credits,alternative_titles"), ids))
 
     films, people, credits = {}, {}, {}
@@ -235,6 +239,24 @@ def main() -> None:
         for c in sorted(d["credits"]["cast"], key=lambda c: c["order"])[:CAST_PER_FILM]:
             add(c, "Actor")
         credits[fid] = rows
+
+    film_count: dict[str, int] = {}
+    for rows in credits.values():
+        for pid, _ in rows:
+            film_count[pid] = film_count.get(pid, 0) + 1
+    keep_full = set(sorted(films, key=lambda f: -films[f]["pop"])[:FULL_CREDITS_TOP])
+    pruned = 0
+    for fid, rows in credits.items():
+        if fid not in keep_full:
+            kept = [r for r in rows if film_count[r[0]] > 1]
+            pruned += len(rows) - len(kept)
+            credits[fid] = kept
+    # A film with no credits left can never be reached, so drop it.
+    for fid in [f for f, rows in credits.items() if not rows]:
+        del credits[fid], films[fid]
+    used = {pid for rows in credits.values() for pid, _ in rows}
+    people = {pid: v for pid, v in people.items() if pid in used}
+    print(f"pruned {pruned} dead-end credits from lesser-known films")
 
     write_graph(films, people, credits, source="tmdb", generated=date.today().isoformat())
 
