@@ -22,18 +22,26 @@ npm run dev        # http://localhost:5173
 npm test           # graph/BFS, schedule, and stats tests + checks every shipped puzzle
 ```
 
-The repo includes a **hand-curated starter dataset** (121 films, 6 languages), so it works without an API key.
+The shipped data covers **~2,900 Indian films and 10,000+ people from TMDb**: Hindi, Tamil, Telugu, Malayalam, Kannada, Marathi and Bengali.
 
-## Full dataset from TMDb (~3,000 films)
-1. Get a free key: themoviedb.org → Settings → API. Copy the **API Read Access Token**.
+## Rebuilding the data
+1. Get a free key: themoviedb.org → Settings → API. Put the **API Read Access Token** in a git-ignored `.env` file:
+   ```
+   TMDB_READ_TOKEN=your_token
+   ```
 2. Build the graph and a fresh puzzle schedule:
    ```bash
-   export TMDB_READ_TOKEN=your_token
-   python3 pipeline/fetch_tmdb.py              # add --scale 0.3 for a quick trial run
-   python3 pipeline/generate_puzzles.py --epoch 2026-10-01
-   npm test                                     # re-verifies every puzzle
+   pip install certifi                          # macOS python.org builds lack SSL root certs
+   python3 pipeline/fetch_tmdb.py              # ~2 min; add --scale 0.1 for a quick trial run
+   python3 pipeline/generate_puzzles.py --epoch 2026-09-01
+   npm test                                     # re-verifies puzzle pars against the new graph
    ```
-   Posters and headshots appear automatically once the data comes from TMDb. Responses are cached in `pipeline/.cache/`, so re-runs are fast.
+   Responses are cached in `pipeline/.cache/`, so re-runs are fast. For a small offline dataset with no key, use `python3 pipeline/build_seed.py`, which builds a hand-curated set of 121 films.
+
+**Data cleaning notes**
+- *Titles:* TMDb stores US English titles, but Indian audiences know *Taare Zameen Par*, not "Like Stars on Earth". The pipeline romanises each native-script original title using Unicode character names (e.g. తారే → "tare"). It keeps the English title unless an Indian alternative title is a much closer phonetic match, and it skips working titles ("Thalapathy 67") and dubbed-release names.
+- *Music credits:* TMDb lists arrangers and one-song contributors under loose job names. So only "Original Music Composer" counts, with fallbacks when a film has none, and at most 3 composers per film.
+- *Coverage:* the vote floor is 5, because Kannada and Marathi films are thinly rated on TMDb. Only the ~800 most-voted films can be a puzzle's start or target; less-known films can still appear as steps in a chain.
 
 Per-language quotas, cast depth and which crew roles count are set at the top of `pipeline/fetch_tmdb.py`. The difficulty curve and endpoint cooldown are set at the top of `generate_puzzles.py`.
 
