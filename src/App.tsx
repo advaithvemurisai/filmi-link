@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Game from './components/Game'
 import { Archive, HowTo, Stats } from './components/Modals'
-import { buildIndex, randomPuzzle, type GraphData, type Index } from './lib/graph'
+import { buildIndex, isValidChain, randomPuzzle, type GraphData, type Index } from './lib/graph'
 import { localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import {
   loadProgress, loadResults, loadSettings, saveProgress, saveResult, saveSettings, type Result,
@@ -11,6 +11,11 @@ type Mode = { kind: 'daily'; date: string } | { kind: 'free'; puzzle: PuzzleDef;
 type Sheet = 'how' | 'stats' | 'archive' | null
 
 const BASE = import.meta.env.BASE_URL
+
+function validProgress(idx: Index, date: string, start: string) {
+  const p = loadProgress(date)
+  return p && isValidChain(idx, p.path, start) ? p : null
+}
 
 export default function App() {
   const [idx, setIdx] = useState<Index | null>(null)
@@ -28,8 +33,16 @@ export default function App() {
       fetch(`${BASE}data/puzzles.json`).then((r) => r.json() as Promise<PuzzleFile>),
     ])
       .then(([g, p]) => {
-        setIdx(buildIndex(g))
+        const index = buildIndex(g)
+        setIdx(index)
         setFile(p)
+        // Drop results saved against an older dataset or schedule (ids/puzzles no longer match).
+        const valid: Record<string, Result> = {}
+        for (const [d, r] of Object.entries(loadResults())) {
+          const pz = puzzleFor(p, d)
+          if (pz && r.par === pz.par && isValidChain(index, r.path, pz.s, r.gaveUp ? undefined : pz.e)) valid[d] = r
+        }
+        setResults(valid)
         try {
           if (!localStorage.getItem('fl:seen')) {
             setSheet('how')
@@ -106,7 +119,7 @@ export default function App() {
           hard={settings.hard}
           shareTitle={shareTitle}
           initialResult={mode.kind === 'daily' ? results[mode.date] ?? null : null}
-          initialProgress={mode.kind === 'daily' ? loadProgress(mode.date) : null}
+          initialProgress={mode.kind === 'daily' ? validProgress(idx, mode.date, puzzle.s) : null}
           onProgress={(p) => mode.kind === 'daily' && saveProgress(mode.date, p)}
           onFinish={(r) => {
             if (mode.kind !== 'daily') return

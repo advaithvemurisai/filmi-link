@@ -64,6 +64,19 @@ export function shortestPath(idx: Index, from: Node, targetFilm: string): Node[]
 export const nodeLabel = (idx: Index, n: Node) =>
   n.kind === 'film' ? idx.data.films[n.id].t : idx.data.people[n.id].n
 
+/**
+ * True if `path` is a well-formed chain in the *current* data starting at film `s`
+ * (and ending at film `e`, if given). Guards against progress saved under older data.
+ */
+export function isValidChain(idx: Index, path: Node[] | undefined, s: string, e?: string): boolean {
+  if (!Array.isArray(path) || !path.length) return false
+  const ok = path.every((n, i) =>
+    n && n.kind === (i % 2 === 0 ? 'film' : 'person') &&
+    (n.kind === 'film' ? n.id in idx.data.films : n.id in idx.data.people))
+  const last = path[path.length - 1]
+  return ok && path[0].id === s && (e === undefined || (last.kind === 'film' && last.id === e))
+}
+
 /** Links = number of people in a chain. */
 export const linkCount = (path: Node[]) => path.filter((n) => n.kind === 'person').length
 

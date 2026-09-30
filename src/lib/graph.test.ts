@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { buildIndex, linkCount, randomPuzzle, shortestPath, type GraphData, type Node } from './graph'
+import { buildIndex, isValidChain, linkCount, randomPuzzle, shortestPath, type GraphData, type Node } from './graph'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from './daily'
 import { computeStats, type Result } from './storage'
 
@@ -27,6 +27,14 @@ describe('shortestPath', () => {
   it('works from a person node (used by hints)', () => {
     const p = shortestPath(idx, { kind: 'person', id: 'p1' }, 'C')!
     expect(p[1]).toEqual<Node>({ kind: 'film', id: 'B' })
+  })
+  it('rejects chains saved against other data', () => {
+    const good: Node[] = [{ kind: 'film', id: 'A' }, { kind: 'person', id: 'p1' }, { kind: 'film', id: 'B' }]
+    expect(isValidChain(idx, good, 'A')).toBe(true)
+    expect(isValidChain(idx, good, 'A', 'C')).toBe(false)
+    expect(isValidChain(idx, [{ kind: 'film', id: 'f116' }], 'A')).toBe(false)
+    expect(isValidChain(idx, [{ kind: 'film', id: 'A' }, { kind: 'person', id: 'p300' }], 'A')).toBe(false)
+    expect(isValidChain(idx, undefined, 'A')).toBe(false)
   })
   it('returns null when unreachable', () => {
     expect(shortestPath(idx, { kind: 'film', id: 'A' }, 'D')).toBeNull()
