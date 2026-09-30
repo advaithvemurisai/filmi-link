@@ -35,6 +35,8 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /filmi-link/
+      # GitHub Pages has no rewrites; serving index.html as the 404 page makes /play deep links work.
+      - run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

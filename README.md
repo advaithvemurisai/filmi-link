@@ -9,7 +9,16 @@ You get two films, like *Amaran* and *Black Friday*. Connect them through the ac
 
 *Film → person → film → person → … → target film*
 
-Each person is one link. Try to match **par**, the shortest possible chain. There's a new puzzle every day, plus random play and an archive.
+Each person is one link. Try to match **par**, the shortest possible chain.
+
+## Features
+- **Daily puzzle:** everyone gets the same pair each day, and difficulty rises through the week.
+- **Verified par:** every puzzle is checked solvable in advance, and par is the true shortest chain.
+- **Results screen:** see your chain next to an optimal one, and share a Wordle-style result card.
+- **Hints:** reveal the next step on a shortest route from wherever you are.
+- **Hard mode:** no hints, and no film counts next to people.
+- **Random play:** endless chains at easy, medium or hard.
+- **Archive and stats:** replay past puzzles and track your streaks.
 
 ## Run locally
 ```bash

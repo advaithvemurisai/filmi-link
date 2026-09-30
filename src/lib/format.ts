@@ -1,6 +1,6 @@
 export const LANGS: Record<string, string> = {
   hi: 'Hindi', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', kn: 'Kannada', mr: 'Marathi', bn: 'Bengali',
-  pa: 'Punjabi', gu: 'Gujarati', or: 'Odia', en: 'English',
+  pa: 'Punjabi', gu: 'Gujarati', or: 'Odia', as: 'Assamese', en: 'English',
 }
 export const langName = (l: string) => LANGS[l] ?? l.toUpperCase()
 

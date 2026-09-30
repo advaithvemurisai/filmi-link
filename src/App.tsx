@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Game from './components/Game'
+import Landing from './components/Landing'
 import { Archive, HowTo, Stats } from './components/Modals'
 import { buildIndex, isValidChain, randomPuzzle, type GraphData, type Index } from './lib/graph'
 import { localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
@@ -11,6 +12,8 @@ type Mode = { kind: 'daily'; date: string } | { kind: 'free'; puzzle: PuzzleDef;
 type Sheet = 'how' | 'stats' | 'archive' | null
 
 const BASE = import.meta.env.BASE_URL
+type Route = 'landing' | 'play'
+const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsWith('play') ? 'play' : 'landing')
 
 function validProgress(idx: Index, date: string, start: string) {
   const p = loadProgress(date)
@@ -26,6 +29,19 @@ export default function App() {
   const [sheet, setSheet] = useState<Sheet>(null)
   const [results, setResults] = useState<Record<string, Result>>(loadResults)
   const [settings, setSettings] = useState(loadSettings)
+  const [route, setRoute] = useState<Route>(routeFromPath)
+
+  useEffect(() => {
+    const onPop = () => setRoute(routeFromPath())
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  const navigate = useCallback((to: Route) => {
+    history.pushState(null, '', to === 'play' ? `${BASE}play` : BASE)
+    setRoute(to)
+    window.scrollTo({ top: 0 })
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -43,15 +59,20 @@ export default function App() {
           if (pz && r.par === pz.par && isValidChain(index, r.path, pz.s, r.gaveUp ? undefined : pz.e)) valid[d] = r
         }
         setResults(valid)
-        try {
-          if (!localStorage.getItem('fl:seen')) {
-            setSheet('how')
-            localStorage.setItem('fl:seen', '1')
-          }
-        } catch { /* ignore */ }
       })
       .catch(() => setError('Could not load film data.'))
   }, [])
+
+  // First time someone reaches the game, show How to play.
+  useEffect(() => {
+    if (route !== 'play' || !idx) return
+    try {
+      if (!localStorage.getItem('fl:seen')) {
+        setSheet('how')
+        localStorage.setItem('fl:seen', '1')
+      }
+    } catch { /* ignore */ }
+  }, [route, idx])
 
   const playRandom = useCallback(
     (par: number) => {
@@ -63,6 +84,17 @@ export default function App() {
     [idx],
   )
 
+  if (route === 'landing') {
+    return (
+      <Landing
+        idx={idx}
+        file={file}
+        today={today}
+        onPlayDaily={() => { setMode({ kind: 'daily', date: today }); navigate('play') }}
+        onPlayRandom={() => { playRandom(3); navigate('play') }}
+      />
+    )
+  }
   if (error) return <div className="splash">{error}</div>
   if (!idx || !file) return <div className="splash"><span className="reel" /> Loading reels…</div>
 
@@ -83,7 +115,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="brand" onClick={() => setMode({ kind: 'daily', date: today })}>
+        <button className="brand" onClick={() => navigate('landing')} title="Home">
           <span className="reel" aria-hidden />
           <span>Cinematic<em>Link</em></span>
         </button>
