@@ -249,7 +249,11 @@ function TargetPanel({
   const [query, setQuery] = useState('')
   const [open] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 960px)').matches)
   const f = idx.data.films[filmId]
-  const credits = [...(idx.filmCredits[filmId] ?? [])].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
+  // People one click from victory float to the top; the rest keep director → music → cast order.
+  const rank = (id: string) => (!hard && reachable.has(id) ? 0 : 1)
+  const credits = [...(idx.filmCredits[filmId] ?? [])].sort(
+    (a, b) => rank(a.id) - rank(b.id) || ROLE_ORDER[a.role] - ROLE_ORDER[b.role],
+  )
   const q = query.trim().toLowerCase()
   const visible = q ? credits.filter((c) => idx.data.people[c.id].n.toLowerCase().includes(q)) : credits
 

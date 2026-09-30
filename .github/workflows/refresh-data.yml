@@ -50,5 +50,6 @@ jobs:
             echo "No data changes."
           else
             git commit -m "data: weekly TMDb refresh ($(date -u +%F))"
+            git pull --rebase
             git push
           fi
