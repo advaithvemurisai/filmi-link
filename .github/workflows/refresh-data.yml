@@ -27,12 +27,15 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install generator dependencies
+        run: pip install numpy scipy
+
       - name: Fetch every Indian film from TMDb
         env:
           TMDB_READ_TOKEN: ${{ secrets.TMDB_READ_TOKEN }}
         run: python pipeline/fetch_tmdb.py
 
-      - name: Extend puzzle schedule (published puzzles are kept)
+      - name: Extend puzzle schedules, India + home-industry dailies (published puzzles are kept)
         run: python pipeline/generate_puzzles.py --epoch 2026-09-01
 
       - name: Verify

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { buildIndex, isValidChain, linkCount, randomPuzzle, shortestPath, type GraphData, type Node } from './graph'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from './daily'
-import { computeStats, type Result } from './storage'
+import { computeStats, ratingFor, type Result } from './storage'
 
 // Tiny graph: A —p1— B —p2— C,  D isolated.
 const tiny: GraphData = {
@@ -43,14 +43,35 @@ describe('shortestPath', () => {
 
 describe('shipped data', () => {
   const graph = JSON.parse(readFileSync('public/data/graph.json', 'utf8')) as GraphData
-  const file = JSON.parse(readFileSync('public/data/puzzles.json', 'utf8')) as PuzzleFile
   const idx = buildIndex(graph)
+  const tracks = ['puzzles', 'puzzles-hi', 'puzzles-ta', 'puzzles-te', 'puzzles-ml', 'puzzles-kn']
+    .map((name) => `public/data/${name}.json`)
+    .filter((path) => existsSync(path))
 
-  it('every scheduled puzzle is solvable in exactly par links', () => {
+  it.each(tracks)('%s: every scheduled puzzle is solvable in exactly par links', (path) => {
+    const file = JSON.parse(readFileSync(path, 'utf8')) as PuzzleFile
     for (const pz of file.puzzles.slice(0, 120)) {
       const p = shortestPath(idx, { kind: 'film', id: pz.s }, pz.e)
       expect(p, `${pz.s}→${pz.e}`).not.toBeNull()
       expect(linkCount(p!)).toBe(pz.par)
+    }
+  })
+
+  it.each(tracks)('%s: alternate routes are real shortest chains and reveals name real people', (path) => {
+    const file = JSON.parse(readFileSync(path, 'utf8')) as PuzzleFile
+    for (const pz of file.puzzles.slice(0, 120)) {
+      for (const ids of pz.alts ?? []) {
+        const chain = ids.map((id, i): Node => ({ kind: i % 2 === 0 ? 'film' : 'person', id }))
+        expect(isValidChain(idx, chain, pz.s, pz.e), ids.join('>')).toBe(true)
+        expect(linkCount(chain)).toBe(pz.par)
+        // Every hop is a real credit.
+        for (let i = 1; i < chain.length; i += 2) {
+          const credits = new Set((idx.filmCredits[chain[i - 1].id] ?? []).map((c) => c.id))
+          const next = new Set((idx.filmCredits[chain[i + 1].id] ?? []).map((c) => c.id))
+          expect(credits.has(chain[i].id) && next.has(chain[i].id), ids.join('>')).toBe(true)
+        }
+      }
+      if (pz.spot) expect(pz.spot.p in graph.people).toBe(true)
     }
   })
   it('random puzzles are solvable and hit the requested par when possible', () => {
@@ -87,7 +108,13 @@ describe('stats', () => {
     )
     expect(s.streak).toBe(3)
     expect(s.best).toBe(3)
-    expect(s.overPar).toEqual({ Par: 3, '+1': 1 })
+    expect(s.tiers).toEqual({ Blockbuster: 3, Hit: 1 })
+    expect(s.blockbusters).toBe(3)
+  })
+  it('rates by links over par, and a hint caps a shortest chain at Hit', () => {
+    expect([2, 3, 4, 5, 9].map((links) => ratingFor(links, 2))).toEqual(['Blockbuster', 'Hit', 'Flop', 'Disaster', 'Disaster'])
+    expect(ratingFor(2, 2, 1)).toBe('Hit')
+    expect(ratingFor(3, 2, 1)).toBe('Hit')
   })
   it('a give-up breaks the streak', () => {
     expect(computeStats({ '2026-09-28': r(2), '2026-09-29': r(2, true, true) }, '2026-09-29').streak).toBe(0)

@@ -3,6 +3,12 @@ export const LANGS: Record<string, string> = {
   pa: 'Punjabi', gu: 'Gujarati', or: 'Odia', as: 'Assamese', en: 'English',
 }
 export const langName = (l: string) => LANGS[l] ?? l.toUpperCase()
+/** First letter of each language in its own script, for compact language chips. */
+export const SCRIPT: Record<string, string> = {
+  hi: 'हि', ta: 'த', te: 'తె', ml: 'മ', kn: 'ಕ', mr: 'म', bn: 'বা', pa: 'ਪ', gu: 'ગ', or: 'ଓ', as: 'অ', en: 'En',
+}
+/** Industries with a home-industry daily. */
+export const HOME_LANGS = ['hi', 'ta', 'te', 'ml', 'kn']
 
 export const IMG = (path: string | null, size = 'w185') => (path ? `https://image.tmdb.org/t/p/${size}${path}` : null)
 

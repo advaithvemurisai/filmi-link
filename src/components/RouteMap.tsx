@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { nodeLabel, type Index, type Node } from '../lib/graph'
-import { Avatar, Poster } from './Bits'
+import { Avatar, Icon, Poster } from './Bits'
 
 const key = (n: Node) => `${n.kind}:${n.id}`
 const H = 170
@@ -85,33 +85,8 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
       <figcaption className="routemap-key">
         {mine && <span><i className="key-mine" /> Your chain</span>}
         {layout.routes.some((r) => r.cls === 'best') && <span><i className="key-best" /> Shortest chain</span>}
-        {mine && best && layout.routes.length === 1 && <span>✨ You found a shortest chain</span>}
+        {mine && best && layout.routes.length === 1 && <span><Icon name="check" size={13} /> Your chain is a shortest chain</span>}
       </figcaption>
     </figure>
-  )
-}
-
-/** A one-shot burst of paper confetti for hitting par. Purely decorative. */
-export function Confetti() {
-  const bits = useMemo(
-    () =>
-      Array.from({ length: 42 }, (_, i) => ({
-        left: Math.random() * 100,
-        delay: Math.random() * 400,
-        rot: Math.random() * 720 - 360,
-        drift: Math.random() * 120 - 60,
-        hue: [42, 350, 170, 100, 28, 270, 210][i % 7],
-      })),
-    [],
-  )
-  return (
-    <div className="confetti" aria-hidden>
-      {bits.map((b, i) => (
-        <i
-          key={i}
-          style={{ left: `${b.left}%`, '--delay': `${b.delay}ms`, '--rot': `${b.rot}deg`, '--drift': `${b.drift}px`, '--h': b.hue } as CSSProperties}
-        />
-      ))}
-    </div>
   )
 }

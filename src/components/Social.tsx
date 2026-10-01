@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Modal, PlayerBadge } from './Bits'
+import { Icon, Modal, PlayerBadge, Stamp } from './Bits'
 import { fetchFriends, login, SyncError, type Account, type Friend } from '../lib/account'
 import { addDays } from '../lib/daily'
 import { clock } from '../lib/format'
-import { computeStats, type Result } from '../lib/storage'
+import { computeStats, rate, tierClass, type Result } from '../lib/storage'
 
 /** Name + 4-digit PIN. A new name creates a player; an existing name needs its PIN. */
 export function AccountSheet({
@@ -45,7 +45,7 @@ export function AccountSheet({
           <PlayerBadge name={account.name} />
           <div>
             <b>{account.name}</b>
-            <span>🔥 {streak} day streak · synced</span>
+            <span><Icon name="flame" size={13} /> {streak} day streak · synced</span>
           </div>
         </div>
         <p className="fine">Sign in with the same name and PIN on another device to carry your streak with you.</p>
@@ -57,7 +57,7 @@ export function AccountSheet({
   return (
     <Modal title="Save your streak" onClose={onClose}>
       <div className="signin-hero" aria-hidden>
-        <span>📱</span><i /><span className="flame">🔥</span><i /><span>💻</span>
+        <Icon name="phone" size={28} /><i /><Icon name="flame" size={34} className="flame" /><i /><Icon name="laptop" size={30} />
       </div>
       <form className="signin" onSubmit={submit}>
         <label>
@@ -110,7 +110,7 @@ export function FriendsSheet({
     return (
       <Modal title="Friends" onClose={onClose}>
         <div className="empty-state">
-          <span aria-hidden>🏆</span>
+          <Icon name="trophy" size={40} />
           <p>Pick a name to see everyone’s streaks and today’s scores.</p>
           <button className="btn primary" onClick={onSignIn}>Pick a name</button>
         </div>
@@ -138,24 +138,19 @@ export function FriendsSheet({
             const me = p.name.toLowerCase() === account.name.toLowerCase()
             return (
               <li key={p.name} className={me ? 'is-me' : ''} style={{ animationDelay: `${rank * 60}ms` }}>
-                <span className="friend-rank">{rank < 3 && p.stats.streak > 0 ? ['🥇', '🥈', '🥉'][rank] : rank + 1}</span>
+                <span className={`friend-rank ${rank < 3 && p.stats.streak > 0 ? 'is-top' : ''}`}>{rank + 1}</span>
                 <PlayerBadge name={p.name} />
                 <span className="friend-main">
                   <b>{p.name}{me && <em> · you</em>}</b>
                   <span className="friend-week" aria-label="Last 7 days">
-                    {week.map((d) => {
-                      const r = p.results[d]
-                      const cls = !r ? '' : r.gaveUp ? 'is-lost' : r.links <= r.par ? 'is-par' : 'is-won'
-                      return <i key={d} className={cls} title={d} />
-                    })}
+                    {week.map((d) => <i key={d} className={tierClass(p.results[d])} title={d} />)}
                   </span>
                 </span>
                 <span className="friend-today" title="Today">
                   {!t ? <span className="muted">not yet</span>
-                    : t.gaveUp ? '🏳️'
-                    : <>{Array.from({ length: t.links }, (_, i) => (i < t.par ? '🟩' : '🟧')).join('')}<small>{clock(t.seconds)}</small></>}
+                    : <><Stamp rating={rate(t) ?? 'Shelved'} small /><small>{t.links} links · {clock(t.seconds)}</small></>}
                 </span>
-                <span className={`friend-streak ${p.stats.streak ? '' : 'is-cold'}`} title="Current streak">🔥{p.stats.streak}</span>
+                <span className={`friend-streak ${p.stats.streak ? '' : 'is-cold'}`} title="Current streak"><Icon name="flame" size={15} />{p.stats.streak}</span>
               </li>
             )
           })}

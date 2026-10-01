@@ -12,7 +12,11 @@ export interface Result {
   live: boolean
 }
 export interface Progress { path: Node[]; startedAt: number; hints: number }
-export interface Settings { hard: boolean }
+/** `home` is the language of the player's optional home-industry daily. */
+export interface Settings { hard: boolean; home?: string }
+
+/** Which daily: the shared pan-India one, or a home-industry one by language code. */
+export type Track = 'all' | string
 
 const read = <T,>(k: string, fallback: T): T => {
   try {
@@ -30,17 +34,35 @@ const write = (k: string, v: unknown) => {
   }
 }
 
-export const loadResults = () => read<Record<string, Result>>('fl:results', {})
-export const saveResults = (all: Record<string, Result>) => write('fl:results', all)
+const resultsKey = (track: Track) => (track === 'all' ? 'fl:results' : `fl:results:${track}`)
+export const loadResults = (track: Track = 'all') => read<Record<string, Result>>(resultsKey(track), {})
+export const saveResults = (all: Record<string, Result>, track: Track = 'all') => write(resultsKey(track), all)
 
-export const loadProgress = (dateKey: string) => read<Progress | null>(`fl:progress:${dateKey}`, null)
-export const saveProgress = (dateKey: string, p: Progress) => write(`fl:progress:${dateKey}`, p)
+const progressKey = (track: Track, dateKey: string) =>
+  track === 'all' ? `fl:progress:${dateKey}` : `fl:progress:${track}:${dateKey}`
+export const loadProgress = (dateKey: string, track: Track = 'all') => read<Progress | null>(progressKey(track, dateKey), null)
+export const saveProgress = (dateKey: string, p: Progress, track: Track = 'all') => write(progressKey(track, dateKey), p)
 
 export const loadSettings = () => read<Settings>('fl:settings', { hard: false })
 export const saveSettings = (s: Settings) => write('fl:settings', s)
 
+/** True once this browser has finished any daily: returning players skip the landing page. */
+export const hasPlayed = () => Object.keys(loadResults()).length > 0
+
 /** The parts of a result stats need (friends' results arrive without their chains). */
-export type Score = Pick<Result, 'links' | 'par' | 'gaveUp' | 'live'>
+export type Score = Pick<Result, 'links' | 'par' | 'gaveUp' | 'live'> & { hints?: number }
+
+/** Box-office rating for a solved puzzle, by how many links over the shortest chain. */
+export const RATINGS = ['Blockbuster', 'Hit', 'Flop', 'Disaster'] as const
+export type Rating = (typeof RATINGS)[number]
+/** A hint-assisted shortest chain is a Hit, not a Blockbuster. */
+export function ratingFor(links: number, par: number, hints = 0): Rating {
+  const r = RATINGS[Math.min(3, Math.max(0, links - par))]
+  return r === 'Blockbuster' && hints > 0 ? 'Hit' : r
+}
+export const rate = (r: Score): Rating | null => (r.gaveUp ? null : ratingFor(r.links, r.par, r.hints))
+/** Class for a day cell in calendars and boards: its rating's colour, or a give-up. */
+export const tierClass = (r: Score | undefined) => (!r ? '' : r.gaveUp ? 'is-lost' : `t-${rate(r)!.toLowerCase()}`)
 
 export function computeStats(results: Record<string, Score>, today: string) {
   const entries = Object.values(results)
@@ -63,12 +85,30 @@ export function computeStats(results: Record<string, Score>, today: string) {
     best = Math.max(best, run)
   }
 
-  const atPar = solved.filter((r) => r.links <= r.par).length
-  const overPar: Record<string, number> = {}
+  const tiers: Partial<Record<Rating, number>> = {}
   for (const r of solved) {
-    const over = r.links - r.par
-    const k = over <= 0 ? 'Par' : over >= 3 ? '+3+' : `+${over}`
-    overPar[k] = (overPar[k] ?? 0) + 1
+    const k = rate(r)!
+    tiers[k] = (tiers[k] ?? 0) + 1
   }
-  return { played: entries.length, solved: solved.length, streak, best, atPar, overPar }
+  return { played: entries.length, solved: solved.length, streak, best, blockbusters: tiers.Blockbuster ?? 0, tiers }
+}
+
+/** Everyone a player has linked through: person id → first date and how many chains. */
+export type Cast = Record<string, { d: string; n: number }>
+export const loadCast = () => read<Cast>('fl:cast', {})
+
+/** Add a solved chain's people to the collection. Returns the ids collected for the first time. */
+export function collectCast(path: Node[], date: string): string[] {
+  const cast = loadCast()
+  const fresh: string[] = []
+  for (const n of path) {
+    if (n.kind !== 'person') continue
+    if (!cast[n.id]) {
+      cast[n.id] = { d: date, n: 0 }
+      fresh.push(n.id)
+    }
+    cast[n.id].n++
+  }
+  write('fl:cast', cast)
+  return fresh
 }

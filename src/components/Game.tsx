@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
-import type { PuzzleDef } from '../lib/daily'
+import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
+import { localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
-import type { Progress, Result } from '../lib/storage'
-import { Avatar, Filmstrip, LangTag, ParMeter, Poster, ROLE_ICON, launchFrom } from './Bits'
-import RouteMap, { Confetti } from './RouteMap'
+import { collectCast, ratingFor, type Progress, type Result } from '../lib/storage'
+import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, ROLE_ICON, Stamp, launchFrom } from './Bits'
+import RouteMap from './RouteMap'
 
 const ROLE_ORDER: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
 const GROUPS: [Role, string][] = [['Director', 'Direction'], ['Music', 'Music'], ['Actor', 'Cast']]
@@ -21,6 +21,10 @@ interface Props {
   onNewRandom: (par: number) => void
   onOpenArchive: () => void
   shareTitle: string
+  /** Today's daily: the result screen counts down to the next one. */
+  isToday: boolean
+  /** How many players took the same route today (pan-India daily, signed-in players only). */
+  routeShare: { count: number; total: number } | null
   /** Signed-in player's name, or null when playing anonymously. */
   player: string | null
   onSaveStreak: () => void
@@ -28,6 +32,17 @@ interface Props {
 }
 
 type Option = { node: Node; role: Role }
+
+/** A button that needs a second tap within a few seconds, for actions that end or cost something. */
+function useArmed(ms = 3500) {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const t = setTimeout(() => setArmed(false), ms)
+    return () => clearTimeout(t)
+  }, [armed, ms])
+  return [armed, setArmed] as const
+}
 
 export default function Game(props: Props) {
   const { idx, puzzle, hard } = props
@@ -39,8 +54,11 @@ export default function Game(props: Props) {
   const [hints, setHints] = useState(props.initialResult?.hints ?? props.initialProgress?.hints ?? 0)
   const [hint, setHint] = useState<Node | null>(null)
   const [result, setResult] = useState<Omit<Result, 'live'> | null>(props.initialResult)
+  const [newFaces, setNewFaces] = useState(0)
   const [now, setNow] = useState(Date.now())
   const [query, setQuery] = useState('')
+  const [quitArmed, setQuitArmed] = useArmed()
+  const [hintArmed, setHintArmed] = useArmed()
   const listRef = useRef<HTMLDivElement>(null)
 
   const current = path[path.length - 1]
@@ -96,6 +114,7 @@ export default function Game(props: Props) {
       links: linkCount(finalPath), par: puzzle.par, seconds: Math.round((Date.now() - startedAt) / 1000),
       hints, gaveUp, path: finalPath,
     }
+    if (!gaveUp) setNewFaces(collectCast(finalPath, localDateKey()).length)
     setResult(r)
     props.onFinish(r)
   }
@@ -112,11 +131,19 @@ export default function Game(props: Props) {
   }
 
   function takeHint() {
+    // The first hint of a puzzle costs the Blockbuster, so it asks once.
+    if (hints === 0 && !hintArmed) return setHintArmed(true)
+    setHintArmed(false)
     const sp = shortestPath(idx, current, puzzle.e)
     if (sp && sp[1]) {
       setHint(sp[1])
       setHints((h) => h + 1)
     }
+  }
+
+  function giveUp() {
+    if (!quitArmed) return setQuitArmed(true)
+    finish(path, true)
   }
 
   const seconds = result ? result.seconds : Math.round((now - startedAt) / 1000)
@@ -128,24 +155,26 @@ export default function Game(props: Props) {
       <Stage idx={idx} puzzle={puzzle} label={props.label} />
 
       {result ? (
-        <ResultPanel {...props} result={result} optimal={optimal} />
+        <ResultPanel {...props} result={result} optimal={optimal} newFaces={newFaces} />
       ) : (
         <>
           <div className="toolbar">
             <ParMeter links={links} par={puzzle.par} />
-            <span className="timer" aria-label="Time">⏱ {clock(seconds)}</span>
+            <span className="timer" aria-label="Time"><Icon name="timer" size={14} /> {clock(seconds)}</span>
             <div className="tools">
               <button className="tool" onClick={() => setPath(path.slice(0, -1))} disabled={path.length < 2} title="Back one step">
-                <span aria-hidden>↶</span><span className="tool-label">Back</span>
+                <Icon name="back" size={16} /><span className="tool-label">Back</span>
               </button>
               {!hard && (
-                <button className="tool tool-hint" onClick={takeHint} title="Reveal the next step on a shortest route">
-                  <span aria-hidden>💡</span><span className="tool-label">Hint</span>
+                <button className={`tool tool-hint ${hintArmed ? 'is-armed' : ''}`} onClick={takeHint}
+                  title="Reveal the next step on a shortest route">
+                  <Icon name="hint" size={16} />
+                  <span className="tool-label">{hintArmed ? 'Caps today at Hit. Tap again' : 'Hint'}</span>
                   {hints > 0 && <b className="tool-count">{hints}</b>}
                 </button>
               )}
-              <button className="tool tool-danger" onClick={() => finish(path, true)} title="Give up and see a solution">
-                <span aria-hidden>🏳️</span><span className="tool-label">Give up</span>
+              <button className={`tool tool-quiet ${quitArmed ? 'is-armed' : ''}`} onClick={giveUp} title="Give up and see a solution">
+                <Icon name="flag" size={16} /><span className="tool-label">{quitArmed ? 'Tap again to give up' : 'Give up'}</span>
               </button>
             </div>
           </div>
@@ -166,19 +195,23 @@ export default function Game(props: Props) {
                   <p className="meta">
                     {current.kind === 'film'
                       ? <>{films[current.id].y} <LangTag l={films[current.id].l} /></>
-                      : <>🎞 {options.length} film{options.length === 1 ? '' : 's'}</>}
+                      : <>{options.length} film{options.length === 1 ? '' : 's'}</>}
                   </p>
                 </div>
-                <span className="now-next" aria-hidden>{current.kind === 'film' ? '👤' : '🎞'}<i>→</i></span>
+                <span className="now-next">
+                  {current.kind === 'film' ? 'Pick a person' : 'Pick a film'} <Icon name="arrow" size={14} />
+                </span>
               </header>
 
               {options.length > 12 && (
-                <input
-                  className="search"
-                  placeholder={current.kind === 'film' ? '🔎  Find cast & crew' : '🔎  Find a film'}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+                <label className="search">
+                  <Icon name="search" size={16} />
+                  <input
+                    placeholder={current.kind === 'film' ? 'Find cast & crew' : 'Find a film'}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
               )}
 
               <div className="options" ref={listRef} key={`o${current.kind}${current.id}`}>
@@ -188,7 +221,7 @@ export default function Game(props: Props) {
                       if (!items.length) return null
                       return (
                         <div className="group" key={role}>
-                          <p className="group-head"><span aria-hidden>{ROLE_ICON[role]}</span> {title} <em>{items.length}</em></p>
+                          <p className="group-head"><Icon name={ROLE_ICON[role]} size={13} /> {title} <em>{items.length}</em></p>
                           <div className="grid grid-people">
                             {items.map((o, i) => {
                               const used = inPath.has(`person:${o.node.id}`)
@@ -217,9 +250,11 @@ export default function Game(props: Props) {
                       ))}
                     </div>
                   )}
-                {!visible.length && <p className="empty"><span aria-hidden>🔍</span> Nothing matches “{query}”.</p>}
+                {!visible.length && (
+                  <p className="empty"><Icon name="search" size={22} /> Nothing matches “{query}”. Try part of a name.</p>
+                )}
                 {deadEnd && (
-                  <p className="empty"><span aria-hidden>🚧</span> Dead end. Step <b>back</b> or tap an earlier frame.</p>
+                  <p className="empty"><Icon name="ban" size={22} /> Dead end: everyone here is already in your chain. Tap a frame above to branch off.</p>
                 )}
               </div>
             </section>
@@ -252,6 +287,14 @@ function Reach({ n }: { n: number }) {
   )
 }
 
+/** Small corner badge on a card: a non-colour cue for its state. */
+function CardFlag({ win, used, hint }: { win: boolean; used: boolean; hint: boolean }) {
+  if (hint) return <span className="card-flag is-hint" aria-hidden><Icon name="hint" size={12} /></span>
+  if (win) return <span className="card-flag is-win" aria-hidden><Icon name="target" size={12} /></span>
+  if (used) return <span className="card-flag is-used" aria-hidden><Icon name="check" size={12} /></span>
+  return null
+}
+
 function PersonCard({
   idx, id, role, i, others, hard, used, win, hint, onPick,
 }: {
@@ -263,20 +306,19 @@ function PersonCard({
   const detail = hard ? role : `${role} · ${others === 0 ? 'no other films' : `${others} other film${others > 1 ? 's' : ''}`}`
   return (
     <button
-      className={`card person-card role-${role.toLowerCase()} ${used ? 'is-used' : ''} ${win ? 'is-win' : ''} ${hint ? 'is-hint' : ''} ${dead ? 'is-dead' : ''}`}
+      className={`card person-card ${used ? 'is-used' : ''} ${win ? 'is-win' : ''} ${hint ? 'is-hint' : ''} ${dead ? 'is-dead' : ''}`}
       style={stagger(i)}
       onClick={(e) => onPick(e.currentTarget)}
       title={`${name} · ${detail}${win ? ' · also worked on the target!' : ''}`}
     >
       <span className="card-art">
         <Avatar idx={idx} id={id} size="lg" />
-        {role !== 'Actor' && <span className="card-role" aria-hidden>{ROLE_ICON[role]}</span>}
-        {win && <span className="card-flag" aria-hidden>🎯</span>}
-        {used && <span className="card-flag used" aria-hidden>✓</span>}
+        {role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>}
+        <CardFlag win={win} used={used} hint={hint} />
       </span>
       <span className="card-name">{name}</span>
       {!hard && <Reach n={others} />}
-      <span className="sr-only">{detail}</span>
+      <span className="sr-only">{detail}{win ? ', also worked on the target' : ''}{hint ? ', hint' : ''}</span>
     </button>
   )
 }
@@ -290,7 +332,7 @@ function FilmCard({
   const f = idx.data.films[id]
   return (
     <button
-      className={`card film-card lang-${f.l} ${used ? 'is-used' : ''} ${target ? 'is-win' : ''} ${hint ? 'is-hint' : ''}`}
+      className={`card film-card ${used ? 'is-used' : ''} ${target ? 'is-win' : ''} ${hint ? 'is-hint' : ''}`}
       style={stagger(i)}
       onClick={(e) => onPick(e.currentTarget)}
       title={`${f.t} (${f.y ?? '?'}) · as ${role.toLowerCase()}`}
@@ -298,19 +340,19 @@ function FilmCard({
       <span className="card-art">
         <Poster idx={idx} id={id} size="md" />
         {f.y && <span className="card-year">{f.y}</span>}
-        {role !== 'Actor' && <span className="card-role" aria-hidden>{ROLE_ICON[role]}</span>}
-        {target && <span className="card-flag" aria-hidden>🎯</span>}
-        {used && !target && <span className="card-flag used" aria-hidden>✓</span>}
+        {role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>}
+        <CardFlag win={target} used={used && !target} hint={hint} />
       </span>
       <span className="card-name">{f.t}</span>
+      <span className="sr-only">{target ? 'the target' : ''}{hint ? ', hint' : ''}</span>
     </button>
   )
 }
 
 /**
  * The target film's cast & crew as a wall of faces, so players can plan from both ends.
- * Faces who also worked on the current film are one tap from victory: they glow and are clickable
- * (except in hard mode).
+ * Faces who also worked on the current film are one tap from victory (except in hard mode).
+ * On phones the header stays pinned while you scroll, so the target never leaves the screen.
  */
 function TargetPanel({
   idx, filmId, hard, reachable, onPick,
@@ -337,18 +379,21 @@ function TargetPanel({
       <summary className="target-head">
         <Poster idx={idx} id={filmId} size="md" />
         <div className="now-copy">
-          <p className="kicker target-kicker">🎯 Target</p>
+          <p className="kicker target-kicker"><Icon name="target" size={12} /> Target</p>
           <h2>{f.t}</h2>
-          <p className="meta">{f.y} <LangTag l={f.l} /> · 👥 {credits.length}</p>
+          <p className="meta">{f.y} <LangTag l={f.l} /> · {credits.length} people</p>
         </div>
-        {liveCount > 0 && <span className="live-count" title="People one tap from the target">⚡ {liveCount}</span>}
-        <span className="chev" aria-hidden>▾</span>
+        {liveCount > 0 && <span className="live-count" title="People one tap from the target"><Icon name="zap" size={13} /> {liveCount}</span>}
+        <Icon name="chevron" size={18} className="chev" />
       </summary>
       <p className="face-note">
-        {liveCount > 0 ? '⚡ Glowing faces are one tap from the target.' : 'Work backwards: reach any of these faces.'}
+        {liveCount > 0 ? 'Ringed faces are one tap from the target.' : 'Work backwards: reach any of these faces.'}
       </p>
       {credits.length > 18 && (
-        <input className="search" placeholder="🔎  Find in target's cast & crew" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <label className="search">
+          <Icon name="search" size={16} />
+          <input placeholder="Find in the target’s cast & crew" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </label>
       )}
       <div className="face-wall">
         {visible.map((c, i) => {
@@ -357,7 +402,8 @@ function TargetPanel({
             <>
               <span className="face-art">
                 <Avatar idx={idx} id={c.id} size="md" />
-                {c.role !== 'Actor' && <span className="card-role" aria-hidden>{ROLE_ICON[c.role]}</span>}
+                {c.role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[c.role]} size={10} /></span>}
+                {live && <span className="card-flag is-win" aria-hidden><Icon name="target" size={10} /></span>}
               </span>
               <span className="face-name">{idx.data.people[c.id].n}</span>
             </>
@@ -375,7 +421,7 @@ function TargetPanel({
   )
 }
 
-/** Start and target posters facing off, over a blurred wash of both. */
+/** Start and target as a double bill, over a dimmed wash of both posters. */
 function Stage({ idx, puzzle, label }: { idx: Index; puzzle: PuzzleDef; label: string }) {
   const { films } = idx.data
   const bgA = IMG(films[puzzle.s].p, 'w342')
@@ -386,13 +432,16 @@ function Stage({ idx, puzzle, label }: { idx: Index; puzzle: PuzzleDef; label: s
         {bgA && <img src={bgA} alt="" />}
         {bgB && <img src={bgB} alt="" />}
       </div>
+      <div className="stage-top">
+        <span className="puzzle-label">{label}</span>
+        {puzzle.theme && <span className="theme-ribbon">{puzzle.theme}</span>}
+      </div>
       <FilmEnd idx={idx} id={puzzle.s} kicker="Start" />
       <div className="stage-mid">
-        <span className="puzzle-label">{label}</span>
-        <span className="stage-line" aria-hidden><i /></span>
-        <span className="par-pill">Par {puzzle.par}</span>
+        <span className="stage-line" aria-hidden />
+        <span className="par-pill">Shortest {puzzle.par}</span>
       </div>
-      <FilmEnd idx={idx} id={puzzle.e} kicker="🎯 Target" target />
+      <FilmEnd idx={idx} id={puzzle.e} kicker="Target" target />
     </section>
   )
 }
@@ -403,7 +452,7 @@ function FilmEnd({ idx, id, kicker, target }: { idx: Index; id: string; kicker: 
     <div className={`film-end ${target ? 'is-target' : ''}`}>
       <Poster idx={idx} id={id} size="lg" />
       <div>
-        <p className="kicker">{kicker}</p>
+        <p className="kicker">{target && <Icon name="target" size={11} />} {kicker}</p>
         <h3>{f.t}</h3>
         <p className="meta">{f.y} <LangTag l={f.l} /></p>
       </div>
@@ -411,21 +460,64 @@ function FilmEnd({ idx, id, kicker, target }: { idx: Index; id: string; kicker: 
   )
 }
 
-function ResultPanel({
-  idx, puzzle, result, optimal, shareTitle, onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
-}: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null }) {
-  const [copied, setCopied] = useState(false)
-  const { films } = idx.data
-  const diff = result.links - puzzle.par
-  const atPar = !result.gaveUp && diff <= 0
+/** Alternate shortest routes from the generator, as chains (skipping any the player already sees). */
+function missedRoutes(idx: Index, puzzle: PuzzleDef, seen: (Node[] | null)[]): Node[][] {
+  const sig = (p: Node[]) => p.map((n) => n.id).join('>')
+  const skip = new Set(seen.filter(Boolean).map((p) => sig(p!)))
+  return (puzzle.alts ?? [])
+    .map((ids) => ids.map((id, i): Node => ({ kind: i % 2 === 0 ? 'film' : 'person', id })))
+    .filter((p) => isValidChain(idx, p, puzzle.s, puzzle.e) && linkCount(p) === puzzle.par && !skip.has(sig(p)))
+    .slice(0, 2)
+}
 
-  const [mark, verdict] = result.gaveUp
-    ? ['🎞️', 'The reel ran out.']
-    : atPar
-      ? ['🏆', 'Perfect cut! You hit par.']
-      : diff === 1
-        ? ['🎯', 'So close: one over par.']
-        : ['✅', `Linked! ${diff} over par.`]
+/** Live countdown to the next daily. */
+function NextPuzzle() {
+  const [left, setLeft] = useState(msToMidnight)
+  useEffect(() => {
+    const t = setInterval(() => setLeft(msToMidnight()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const s = Math.floor(left / 1000)
+  const hms = [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, '0')).join(':')
+  return (
+    <div className="next-puzzle">
+      <Icon name="clock" size={16} />
+      <span>Next puzzle in</span>
+      <b>{hms}</b>
+    </div>
+  )
+}
+
+function ResultPanel({
+  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare,
+  onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
+}: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null; newFaces: number }) {
+  const [copied, setCopied] = useState(false)
+  const { films, people } = idx.data
+  const rating = result.gaveUp ? 'Shelved' : ratingFor(result.links, puzzle.par, result.hints)
+  const diff = result.links - puzzle.par
+  const blockbuster = rating === 'Blockbuster'
+
+  const verdict = result.gaveUp
+    ? 'The reel ran out. Here’s how it connects.'
+    : blockbuster
+      ? 'You found the shortest chain.'
+      : diff <= 0
+        ? 'Shortest chain, with a little help from a hint.'
+        : `${diff} link${diff > 1 ? 's' : ''} over the shortest chain.`
+
+  const share = routeShare && routeShare.total > 0 ? routeShare.count / routeShare.total : null
+  const cult = !!routeShare && routeShare.total >= 20 && share! < 0.05
+  const routeLine = !routeShare || result.gaveUp ? null
+    : routeShare.total <= 1 ? 'You’re the first player to finish today.'
+    : routeShare.total < 5 ? `${routeShare.count} of ${routeShare.total} players today took your route.`
+    : `${Math.max(1, Math.round(share! * 100))}% of players today took your route.`
+
+  const missed = useMemo(
+    () => missedRoutes(idx, puzzle, [optimal, result.gaveUp ? null : result.path]),
+    [idx, puzzle, optimal, result],
+  )
+  const spot = puzzle.spot && puzzle.spot.p in people ? puzzle.spot : null
 
   const blocks = result.gaveUp
     ? '⬛⬛⬛'
@@ -434,12 +526,12 @@ function ResultPanel({
     shareTitle,
     `${films[puzzle.s].t} → ${films[puzzle.e].t}`,
     result.gaveUp
-      ? `${blocks} gave up (par ${puzzle.par})`
-      : `${blocks} ${result.links} link${result.links > 1 ? 's' : ''} · par ${puzzle.par} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''}`,
+      ? `${blocks} Shelved (shortest ${puzzle.par})`
+      : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''}`,
     window.location.origin + import.meta.env.BASE_URL,
   ].join('\n')
 
-  async function share() {
+  async function doShare() {
     try {
       if (navigator.share && /Mobi/.test(navigator.userAgent)) await navigator.share({ text: shareText })
       else await navigator.clipboard.writeText(shareText)
@@ -451,43 +543,77 @@ function ResultPanel({
   }
 
   return (
-    <section className={`result ${atPar ? 'is-gold' : ''}`}>
-      {atPar && <Confetti />}
+    <section className={`result ${blockbuster ? 'is-gold' : ''}`}>
       <div className="verdict">
-        <span className="verdict-mark" aria-hidden>{mark}</span>
+        <Stamp rating={rating} />
         <h2>{verdict}</h2>
         {!result.gaveUp && <ParMeter links={result.links} par={puzzle.par} big />}
         <div className="result-chips">
-          <span title="Time">⏱ {clock(result.seconds)}</span>
-          <span title="Hints used">💡 {result.hints}</span>
-          <span title="Par">⛳ {puzzle.par}</span>
+          <span title="Time"><Icon name="timer" size={14} /> {clock(result.seconds)}</span>
+          <span title="Hints used"><Icon name="hint" size={14} /> {result.hints}</span>
+          {newFaces > 0 && <span className="chip-new" title="New people in your cast"><Icon name="users" size={14} /> +{newFaces} new in your cast</span>}
+          {cult && <span className="chip-cult"><Icon name="star" size={14} /> Cult Classic route</span>}
         </div>
+        {routeLine && <p className="route-line">{routeLine}</p>}
       </div>
 
       <RouteMap idx={idx} mine={result.gaveUp ? null : result.path} best={optimal} />
 
-      {!result.gaveUp && <Filmstrip idx={idx} path={result.path} replay />}
+      {spot && (
+        <aside className="dyk">
+          <Avatar idx={idx} id={spot.p} size="lg" />
+          <div>
+            <p className="kicker">Did you know?</p>
+            <p>{spot.t}</p>
+          </div>
+        </aside>
+      )}
+
+      {missed.length > 0 && (
+        <section className="missed">
+          <h3><Icon name="route" size={16} /> Other shortest routes</h3>
+          {missed.map((p, i) => <Filmstrip key={i} idx={idx} path={p} replay label={`Another shortest route ${i + 1}`} />)}
+        </section>
+      )}
 
       {!player && !result.gaveUp && (
         <div className="save-cta">
-          <span className="save-flame" aria-hidden>🔥</span>
+          <Icon name="flame" size={28} className="save-flame" />
           <div>
             <b>Keep your streak safe</b>
-            <span>Pick a name + PIN to sync devices and compete with friends.</span>
+            <span>Pick a name and PIN to sync devices and compete with friends.</span>
           </div>
           <button className="btn primary" onClick={onSaveStreak}>Save streak</button>
         </div>
       )}
 
-      <div className="share-card">
-        <pre className="share-preview">{shareText}</pre>
-        <div className="result-actions">
-          <button className="btn primary" onClick={share}>{copied ? 'Copied ✓' : '📤 Share'}</button>
-          {player && <button className="btn" onClick={onOpenFriends}>🏆 Friends</button>}
-          <button className="btn" onClick={() => onNewRandom(3)}>🎲 Random chain</button>
-          <button className="btn ghost" onClick={onOpenArchive}>🗂 Archive</button>
+      <div className="ticket" aria-label="Your result ticket">
+        <div className="ticket-main">
+          <p className="ticket-kicker">CinematicLink · {label}</p>
+          <p className="ticket-films">{films[puzzle.s].t} <Icon name="arrow" size={14} /> {films[puzzle.e].t}</p>
+          <p className="ticket-blocks" aria-hidden>
+            {result.gaveUp
+              ? Array.from({ length: puzzle.par }, (_, i) => <i key={i} className="is-lost" />)
+              : Array.from({ length: result.links }, (_, i) => <i key={i} className={i < puzzle.par ? '' : 'is-over'} />)}
+          </p>
+          <p className="ticket-meta">
+            {result.gaveUp ? `Shortest was ${puzzle.par}` : `${result.links} link${result.links > 1 ? 's' : ''} · shortest ${puzzle.par}`} · {clock(result.seconds)}
+          </p>
+        </div>
+        <div className="ticket-stub">
+          <Stamp rating={rating} small />
         </div>
       </div>
+      <div className="result-actions">
+        <button className="btn primary" onClick={doShare}>
+          <Icon name={copied ? 'check' : 'share'} size={16} /> {copied ? 'Copied' : 'Share result'}
+        </button>
+        {player && <button className="btn" onClick={onOpenFriends}><Icon name="trophy" size={16} /> Friends</button>}
+        <button className="btn" onClick={() => onNewRandom(3)}><Icon name="dice" size={16} /> Random chain</button>
+        <button className="btn ghost" onClick={onOpenArchive}><Icon name="archive" size={16} /> Archive</button>
+      </div>
+
+      {isToday && <NextPuzzle />}
     </section>
   )
 }

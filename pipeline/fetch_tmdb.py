@@ -28,7 +28,7 @@ from datetime import date
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from graph_io import write_graph
+from graph_io import FILM_META_PATH, write_graph
 
 API = "https://api.themoviedb.org/3"
 CACHE = Path(__file__).resolve().parent / ".cache"
@@ -203,12 +203,13 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=12) as pool:
         details = list(pool.map(lambda mid: get(f"/movie/{mid}", append_to_response="credits,alternative_titles"), ids))
 
-    films, people, credits = {}, {}, {}
+    films, people, credits, meta = {}, {}, {}, {}
     for d in details:
         if d.get("status") != "Released":
             continue
         fid = str(d["id"])
         year = int(d["release_date"][:4]) if d.get("release_date") else None
+        meta[fid] = {"d": d.get("release_date") or None, "g": [g["name"] for g in d.get("genres", [])]}
         films[fid] = {
             "t": display_title(d),
             "y": year,
@@ -259,6 +260,8 @@ def main() -> None:
     print(f"pruned {pruned} dead-end credits from lesser-known films")
 
     write_graph(films, people, credits, source="tmdb", generated=date.today().isoformat())
+    # Release dates and genres only feed the puzzle generator, so they stay out of the browser's graph.json.
+    FILM_META_PATH.write_text(json.dumps({f: meta[f] for f in films}, ensure_ascii=False, separators=(",", ":")))
 
 
 if __name__ == "__main__":

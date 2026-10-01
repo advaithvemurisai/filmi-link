@@ -1,4 +1,14 @@
-export interface PuzzleDef { s: string; e: string; par: number }
+export interface PuzzleDef {
+  s: string
+  e: string
+  par: number
+  /** The week's theme, e.g. "Composer Week" or "Released this week: Sholay (1975)". */
+  theme?: string
+  /** A surprising link on a shortest route, revealed after playing. */
+  spot?: { p: string; t: string }
+  /** Alternate shortest routes as id lists, films and people alternating, start first. */
+  alts?: string[][]
+}
 export interface PuzzleFile { epoch: string; puzzles: PuzzleDef[] }
 
 const DAY = 86_400_000
@@ -20,6 +30,12 @@ export const dayDiff = (a: string, b: string) => Math.round((toUTC(b) - toUTC(a)
 export function addDays(key: string, n: number): string {
   const d = new Date(toUTC(key) + n * DAY)
   return d.toISOString().slice(0, 10)
+}
+
+/** Milliseconds until the next local midnight, when the next daily unlocks. */
+export function msToMidnight(now = new Date()): number {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  return next.getTime() - now.getTime()
 }
 
 /** Puzzle number (1-based) for a date, or null before the epoch. Wraps if the schedule runs out. */

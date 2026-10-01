@@ -86,6 +86,7 @@ const userKey = (key: string) => `cl:user:${key}`
 const failKey = (key: string) => `cl:fail:${key}`
 const MAX_FAILS = 8
 const LOCKOUT_SECONDS = 15 * 60
+const ROUTE_TTL = 3 * 86400
 
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.-]{1,19}$/u
 const PIN_RE = /^\d{4}$/
@@ -216,6 +217,23 @@ export async function handle(store: Store, method: string, body: unknown): Promi
       return [{ name: p.name, results }]
     })
     return { status: 200, body: { players } }
+  }
+
+  if (b.action === 'route') {
+    // How many players took the same route on a day's daily. The route is read from the player's own
+    // stored result (first result wins), so it can't be spoofed, and each player counts once per day.
+    const p = await authed(store, b)
+    if ('status' in p) return p
+    const date = typeof b.date === 'string' && DATE_RE.test(b.date) ? b.date : ''
+    const e = date ? p.results[date] : undefined
+    if (!e || e.gaveUp || !e.live) return fail(404, 'No finished chain for that day.')
+    const routeKey = `cl:route:${date}:r:${e.path.map((n) => n.id).join('-')}`
+    const totalKey = `cl:route:${date}:total`
+    const first = (await store.bump(`cl:route:${date}:p:${p.name.toLowerCase()}`, ROUTE_TTL)) === 1
+    const [count, total] = first
+      ? [await store.bump(routeKey, ROUTE_TTL), await store.bump(totalKey, ROUTE_TTL)]
+      : (await store.mget([routeKey, totalKey])).map((v) => Number(v) || 0)
+    return { status: 200, body: { count, total } }
   }
 
   return fail(400, 'Unknown action.')

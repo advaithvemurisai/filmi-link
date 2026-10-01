@@ -1,4 +1,4 @@
-# CinematicLink 🎬
+# CinematicLink
 
 **▶ Play: https://cinematic-link.vercel.app**
 
@@ -9,18 +9,21 @@ You get two films, like *Amaran* and *Black Friday*. Connect them through the ac
 
 *Film → person → film → person → … → target film*
 
-Each person is one link. Try to match **par**, the shortest possible chain.
+Each person is one link. Match the shortest possible chain for a **Blockbuster**. Each extra link drops a tier: **Hit**, **Flop**, **Disaster**. Using a hint caps the day at a Hit.
 
 ## Features
-- **Daily puzzle:** everyone gets the same pair each day, and difficulty rises through the week.
-- **Verified par:** every puzzle is checked solvable in advance, and par is the true shortest chain.
-- **Results screen:** see your chain next to an optimal one, and share a Wordle-style result card.
-- **Hints:** reveal the next step on a shortest route from wherever you are.
-- **Hard mode:** no hints, and no film counts next to people.
-- **Random play:** endless chains at easy, medium or hard.
-- **Archive and stats:** replay past puzzles and track your streaks on a calendar.
-- **Players and friends:** pick a name + 4-digit PIN to sync your streak across devices and see a friends leaderboard (today's score, 7-day history, streaks; routes stay hidden).
-- **Visual play:** face and poster cards, a filmstrip that fills toward par, a glowing 🎯 on anyone one step from the target, and a route map of your chain against the shortest one.
+- **Two dailies:** the India daily everyone shares, plus an optional home-cinema daily (Hindi, Tamil, Telugu, Malayalam or Kannada) built only from that industry's films.
+- **Puzzles picked for players:** the generator scores candidate pairs on how familiar both films are, how many shortest routes exist, whether at least one uses top-billed people, and whether every route runs through the same few mega-stars. Every puzzle is verified solvable, and its target is the true shortest chain.
+- **Weekly themes:** Released this week, language spotlights, decade weeks and composer weeks.
+- **The reveal:** after solving, a "Did you know?" fact about someone on a shortest route (an actor who directed, a composer who acted, a 40-year span), the other shortest routes you missed, and your chain drawn against the shortest one.
+- **Route rarity:** signed-in players see how many others took the same route that day, and a rare one earns a Cult Classic badge.
+- **Your cast:** everyone you link through is collected, with progress toward the 100 most-connected stars.
+- **Guided first game:** new players tap through a real 2-link example before their first daily. Returning players go straight to the game, with a countdown to the next puzzle.
+- **Hard mode, random play, archive and stats:** no-hint play, endless chains, past puzzles, and streaks on a calendar.
+- **Players and friends:** pick a name + 4-digit PIN to sync your streak across devices and see a friends leaderboard (routes stay hidden).
+
+## Puzzle pipeline
+`pipeline/fetch_tmdb.py` builds the film graph from TMDb, then `pipeline/generate_puzzles.py` writes `public/data/puzzles.json` and `puzzles-<lang>.json` (needs `numpy` and `scipy`). It also writes `pipeline/review.md`, the next two weeks with runner-ups. To pin a hand-picked pair to a date, add it to `pipeline/overrides.json`. A weekly GitHub Action refreshes both. Already-published puzzles never change.
 
 ## Run locally
 ```bash

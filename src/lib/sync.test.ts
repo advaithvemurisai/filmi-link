@@ -70,4 +70,35 @@ describe('sync api', () => {
     expect(anu.results['2026-09-30'].links).toBe(2)
     expect(JSON.parse(JSON.stringify(anu.results['2026-09-30'])).path).toBeUndefined()
   })
+
+  it('counts how many players took each route, once per player, from their stored chain', async () => {
+    const store = memoryStore()
+    const other = [{ kind: 'film', id: '1' }, { kind: 'person', id: '9' }, { kind: 'film', id: '3' }]
+    const day = '2026-09-30'
+    const players = [['Asha', entry(1)], ['Bhuvan', entry(1)], ['Chitra', entry(1, { path: other })]] as const
+    const tokens: Record<string, string> = {}
+    for (const [name, e] of players) {
+      const r = await handle(store, 'POST', { action: 'login', name, pin: '1111', results: { [day]: e } })
+      tokens[name] = r.body.token as string
+    }
+    const ask = (name: string) => handle(store, 'POST', { action: 'route', name, token: tokens[name], date: day })
+    expect((await ask('Asha')).body).toEqual({ count: 1, total: 1 })
+    expect((await ask('Bhuvan')).body).toEqual({ count: 2, total: 2 })
+    expect((await ask('Chitra')).body).toEqual({ count: 1, total: 3 })
+    // Asking again doesn't count twice.
+    expect((await ask('Asha')).body).toEqual({ count: 2, total: 3 })
+  })
+
+  it('has no route share for give-ups, archive plays or missing days', async () => {
+    const store = memoryStore()
+    const r = await handle(store, 'POST', {
+      action: 'login', name: 'Dev', pin: '2222',
+      results: { '2026-09-29': entry(2, { gaveUp: true }), '2026-09-28': entry(2, { live: false }) },
+    })
+    const ask = (date: string) => handle(store, 'POST', { action: 'route', name: 'Dev', token: r.body.token, date })
+    expect((await ask('2026-09-29')).status).toBe(404)
+    expect((await ask('2026-09-28')).status).toBe(404)
+    expect((await ask('2026-09-30')).status).toBe(404)
+    expect((await handle(store, 'POST', { action: 'route', name: 'Dev', token: 'bad', date: '2026-09-29' })).status).toBe(401)
+  })
 })

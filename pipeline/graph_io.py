@@ -13,6 +13,14 @@ from pathlib import Path
 DATA_DIR = Path(__file__).resolve().parent.parent / "public" / "data"
 GRAPH_PATH = DATA_DIR / "graph.json"
 PUZZLES_PATH = DATA_DIR / "puzzles.json"
+# Extra film facts for the puzzle generator only ({film_id: {"d": "YYYY-MM-DD", "g": [genre, ...]}}),
+# written by fetch_tmdb.py and kept out of the browser's graph.json.
+FILM_META_PATH = Path(__file__).resolve().parent / "film_meta.json"
+
+
+def puzzles_path(track: str) -> Path:
+    """puzzles.json for the pan-India daily, puzzles-<lang>.json for a home-industry daily."""
+    return PUZZLES_PATH if track == "all" else DATA_DIR / f"puzzles-{track}.json"
 
 
 def write_graph(films: dict, people: dict, credits: dict, *, source: str, generated: str) -> None:

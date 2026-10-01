@@ -49,3 +49,7 @@ export const sync = (a: Account, results: Record<string, Result>) =>
   call<{ results: Record<string, Result> }>({ action: 'sync', ...a, results })
 
 export const fetchFriends = (a: Account) => call<{ players: Friend[] }>({ action: 'board', ...a })
+
+/** How many players took the same route as you on a day's pan-India daily (the server reads your stored chain). */
+export const fetchRouteShare = (a: Account, date: string) =>
+  call<{ count: number; total: number }>({ action: 'route', ...a, date })
