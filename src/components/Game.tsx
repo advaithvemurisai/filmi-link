@@ -85,6 +85,16 @@ export default function Game(props: Props) {
     if (hint) listRef.current?.querySelector('.is-hint')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [hint])
 
+  // A result can arrive after the game mounts (signing in on a new device pulls today's from the server):
+  // show it instead of letting the puzzle be played a second time.
+  useEffect(() => {
+    if (!props.initialResult || result) return
+    setResult(props.initialResult)
+    setPath(props.initialResult.path)
+    setHints(props.initialResult.hints)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.initialResult])
+
   const optimal = useMemo(
     () => (result ? shortestPath(idx, start, puzzle.e) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
