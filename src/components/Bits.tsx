@@ -62,7 +62,8 @@ export function Poster({ idx, id, size = 'md' }: { idx: Index; id: string; size?
   const src = IMG(f.p, size === 'lg' || size === 'xl' ? 'w342' : 'w185')
   return (
     <div className={`poster poster-${size}`} aria-hidden>
-      {src ? <img src={src} alt="" loading="lazy" /> : <span className="poster-title">{f.t}</span>}
+      {src ? <img src={src} alt="" loading="lazy" />
+        : size === 'sm' ? <Icon name="film" size={14} /> : <span className="poster-title">{f.t}</span>}
     </div>
   )
 }

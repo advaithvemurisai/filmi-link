@@ -28,7 +28,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onPl
   const ready = idx && puzzle
   const languages = useMemo(() => (idx ? new Set(Object.values(idx.data.films).map((f) => f.l)).size : 0), [idx])
   const day = new Date(today + 'T00:00')
-  const date = day.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  const date = day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
 
   // The start film's director, composer and top-billed cast: the first move, playable right here.
   const faces = useMemo(() => {

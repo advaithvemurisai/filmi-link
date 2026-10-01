@@ -519,7 +519,7 @@ function ResultPanel({
     : blockbuster
       ? 'You found the shortest chain.'
       : diff <= 0
-        ? 'Shortest chain, with a little help from a hint.'
+        ? 'Shortest chain! A hint kept it from Blockbuster.'
         : `${diff} link${diff > 1 ? 's' : ''} over the shortest chain.`
 
   const share = routeShare && routeShare.total > 0 ? routeShare.count / routeShare.total : null
@@ -572,6 +572,14 @@ function ResultPanel({
           {cult && <span className="chip-cult"><Icon name="star" size={14} /> Cult Classic route</span>}
         </div>
         {routeLine && <p className="route-line">{routeLine}</p>}
+        <div className="result-actions">
+          <button className="btn primary" onClick={doShare}>
+            <Icon name={copied ? 'check' : 'share'} size={16} /> {copied ? 'Copied' : 'Share result'}
+          </button>
+          {player && <button className="btn" onClick={onOpenFriends}><Icon name="trophy" size={16} /> Friends</button>}
+          <button className="btn" onClick={() => onNewRandom(3)}><Icon name="dice" size={16} /> Random chain</button>
+          <button className="btn ghost" onClick={onOpenArchive}><Icon name="archive" size={16} /> Archive</button>
+        </div>
       </div>
 
       <RouteMap idx={idx} mine={result.gaveUp ? null : result.path} best={optimal} />
@@ -587,10 +595,10 @@ function ResultPanel({
       )}
 
       {missed.length > 0 && (
-        <section className="missed">
-          <h3><Icon name="route" size={16} /> Other shortest routes</h3>
+        <details className="missed">
+          <summary><Icon name="route" size={16} /> Other shortest routes <em>{missed.length}</em><Icon name="chevron" size={14} className="chev" /></summary>
           {missed.map((p, i) => <Filmstrip key={i} idx={idx} path={p} replay label={`Another shortest route ${i + 1}`} />)}
-        </section>
+        </details>
       )}
 
       {!player && !result.gaveUp && (
@@ -621,15 +629,6 @@ function ResultPanel({
           <Stamp rating={rating} small />
         </div>
       </div>
-      <div className="result-actions">
-        <button className="btn primary" onClick={doShare}>
-          <Icon name={copied ? 'check' : 'share'} size={16} /> {copied ? 'Copied' : 'Share result'}
-        </button>
-        {player && <button className="btn" onClick={onOpenFriends}><Icon name="trophy" size={16} /> Friends</button>}
-        <button className="btn" onClick={() => onNewRandom(3)}><Icon name="dice" size={16} /> Random chain</button>
-        <button className="btn ghost" onClick={onOpenArchive}><Icon name="archive" size={16} /> Archive</button>
-      </div>
-
       {isToday && <NextPuzzle />}
     </section>
   )

@@ -3,7 +3,8 @@ import { nodeLabel, type Index, type Node } from '../lib/graph'
 import { Avatar, Icon, Poster } from './Bits'
 
 const key = (n: Node) => `${n.kind}:${n.id}`
-const H = 170
+// Two routes need room to stack; a single route sits on one line.
+const heightFor = (routes: number) => (routes > 1 ? 190 : 120)
 
 /**
  * Your chain and the shortest chain drawn as two routes between the same two films.
@@ -54,11 +55,12 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
 
   if (!layout.routes.length) return null
   const at = new Map(layout.spots)
+  const H = heightFor(layout.routes.length)
 
   return (
     <figure className="routemap">
       <div className="routemap-scroll">
-        <div className="routemap-canvas" ref={canvasRef} style={{ minWidth: `${layout.longest * 46}px` }}>
+        <div className="routemap-canvas" ref={canvasRef} style={{ minWidth: `${layout.longest * 54}px`, height: H }}>
           <svg viewBox={`0 0 ${w || 100} ${H}`} aria-hidden>
             {layout.edges.map((e, i) => {
               const a = at.get(e.a)!, b = at.get(e.b)!

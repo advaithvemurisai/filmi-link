@@ -437,8 +437,8 @@ div.face .avatar { opacity: .85; }
 @keyframes stamp-in { from { transform: scale(1.9) rotate(-14deg); opacity: 0; } 60% { opacity: 1; } }
 
 .routemap { margin: 0; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 10px; }
-.routemap-scroll { overflow-x: auto; }
-.routemap-canvas { position: relative; height: 170px; }
+.routemap-scroll { overflow-x: auto; padding: 0 26px; }
+.routemap-canvas { position: relative; }
 .routemap-canvas > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .rm-edge { stroke-linecap: round; fill: none; }
 .rm-mine { stroke: var(--text); stroke-width: 3; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .5s ease-out forwards; animation-delay: calc(var(--d) + 200ms); }
@@ -462,8 +462,14 @@ div.face .avatar { opacity: .85; }
 .dyk .kicker { color: var(--t-blockbuster); }
 .dyk p:last-child { font-size: 15.5px; line-height: 1.5; margin-top: 4px; }
 .missed { display: grid; gap: 8px; }
-.missed h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 8px; color: var(--muted); }
-.missed .strip { margin: 0; }
+.missed summary { cursor: pointer; list-style: none; font-family: var(--display); font-size: 15px; text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: 8px; color: var(--muted); padding: 4px 0; }
+.missed summary::-webkit-details-marker { display: none; }
+.missed summary em { font-style: normal; font-family: var(--mono); font-size: 12px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; letter-spacing: 0; }
+.missed summary .chev { margin-left: auto; transition: transform .15s; }
+.missed[open] summary .chev { transform: rotate(180deg); }
+.missed .strip { margin: 8px 0 0; }
+.missed .strip + .strip { margin-top: 8px; }
+.result-actions { justify-content: center; }
 
 .save-cta { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 12px; border: 1px dashed var(--line); }
 .save-cta > div { flex: 1; display: grid; gap: 2px; }
