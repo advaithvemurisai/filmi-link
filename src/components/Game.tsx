@@ -23,6 +23,12 @@ interface Props {
   shareTitle: string
   /** Today's daily: the result screen counts down to the next one. */
   isToday: boolean
+  /** India daily number, so share links can challenge friends to beat the score. */
+  dailyNo: number | null
+  /** Links a friend's share link said they used today, if the player arrived from one. */
+  challenge: number | null
+  /** First game after starting from the landing page: show a one-line guide instead of the tutorial. */
+  coach: boolean
   /** How many players took the same route today (pan-India daily, signed-in players only). */
   routeShare: { count: number; total: number } | null
   /** Signed-in player's name, or null when playing anonymously. */
@@ -152,7 +158,7 @@ export default function Game(props: Props) {
 
   return (
     <main className="game">
-      <Stage idx={idx} puzzle={puzzle} label={props.label} />
+      <Stage idx={idx} puzzle={puzzle} label={props.label} challenge={props.challenge} />
 
       {result ? (
         <ResultPanel {...props} result={result} optimal={optimal} newFaces={newFaces} />
@@ -178,6 +184,15 @@ export default function Game(props: Props) {
               </button>
             </div>
           </div>
+
+          {props.coach && (
+            <p className="coach-strip" role="status">
+              {current.kind === 'person'
+                ? <>Now pick one of <b>{nodeLabel(idx, current)}</b>’s films.</>
+                : <>Now pick someone from <b>{nodeLabel(idx, current)}</b>.</>}
+              {' '}Keep hopping until you reach <b>{films[puzzle.e].t}</b>.
+            </p>
+          )}
 
           <Filmstrip
             idx={idx} path={path} activeIndex={path.length - 1}
@@ -422,7 +437,7 @@ function TargetPanel({
 }
 
 /** Start and target as a double bill, over a dimmed wash of both posters. */
-function Stage({ idx, puzzle, label }: { idx: Index; puzzle: PuzzleDef; label: string }) {
+function Stage({ idx, puzzle, label, challenge }: { idx: Index; puzzle: PuzzleDef; label: string; challenge: number | null }) {
   const { films } = idx.data
   const bgA = IMG(films[puzzle.s].p, 'w342')
   const bgB = IMG(films[puzzle.e].p, 'w342')
@@ -440,6 +455,7 @@ function Stage({ idx, puzzle, label }: { idx: Index; puzzle: PuzzleDef; label: s
       <div className="stage-mid">
         <span className="stage-line" aria-hidden />
         <span className="par-pill">Shortest {puzzle.par}</span>
+        {challenge !== null && <span className="par-pill is-friend">Friend: {challenge} link{challenge === 1 ? '' : 's'}</span>}
       </div>
       <FilmEnd idx={idx} id={puzzle.e} kicker="Target" target />
     </section>
@@ -489,7 +505,7 @@ function NextPuzzle() {
 }
 
 function ResultPanel({
-  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare,
+  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo,
   onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
 }: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null; newFaces: number }) {
   const [copied, setCopied] = useState(false)
@@ -528,7 +544,8 @@ function ResultPanel({
     result.gaveUp
       ? `${blocks} Shelved (shortest ${puzzle.par})`
       : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''}`,
-    window.location.origin + import.meta.env.BASE_URL,
+    // A solved India daily links back as a challenge: friends land on "A friend linked these in N links".
+    window.location.origin + import.meta.env.BASE_URL + (dailyNo && !result.gaveUp ? `?c=${dailyNo}-${result.links}` : ''),
   ].join('\n')
 
   async function doShare() {

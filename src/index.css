@@ -233,6 +233,9 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .stage-mid { display: grid; justify-items: center; gap: 8px; min-width: 100px; }
 .stage-line { width: 100%; height: 2px; background: repeating-linear-gradient(90deg, var(--muted) 0 6px, transparent 6px 11px); opacity: .6; }
 .par-pill { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg-2); white-space: nowrap; }
+.par-pill.is-friend { border-color: var(--accent-text); color: var(--accent-text); }
+.coach-strip { margin: 0 2px 10px; padding: 10px 14px; border-radius: 8px; background: var(--bg-2); border-left: 3px solid var(--accent-text); font-size: 14px; line-height: 1.5; color: var(--muted); }
+.coach-strip b { color: var(--text); }
 
 /* ---------- toolbar ---------- */
 .toolbar { display: flex; align-items: center; gap: 12px; margin: 16px 2px 8px; flex-wrap: wrap; }
@@ -629,7 +632,7 @@ div.face .avatar { opacity: .85; }
 /* ================= landing: today's double bill ================= */
 .landing { max-width: 880px; margin: 0 auto; padding: 0 16px 32px; }
 .landing-nav { position: sticky; top: 0; z-index: 5; background: var(--bg); }
-.bill { display: grid; justify-items: center; text-align: center; gap: 16px; padding: 28px 0 40px; }
+.bill { display: grid; justify-items: center; text-align: center; gap: 18px; padding: 20px 0 36px; }
 .bill-kicker { font-family: var(--mono); font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .bill-posters { display: grid; grid-template-columns: minmax(0, 210px) auto minmax(0, 210px); align-items: center; gap: 18px; width: 100%; justify-content: center; margin-top: 6px; }
 .bill-film { margin: 0; display: grid; gap: 10px; animation: rise .5s ease-out both; }
@@ -643,12 +646,24 @@ div.face .avatar { opacity: .85; }
 .bill-gap::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--line); }
 .bill-gap i { position: relative; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); background: var(--bg); }
 .bill-skeleton { aspect-ratio: 2 / 3; border-radius: 8px; background: var(--surface); animation: shimmer 1.2s ease-in-out infinite alternate; }
-.bill h1 { font-size: clamp(36px, 7vw, 60px); margin-top: 10px; }
-.bill-lede { font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 520px; }
-.bill-ctas { display: grid; justify-items: center; gap: 8px; margin-top: 4px; }
-.bill-steps { list-style: none; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 28px; font-size: 14px; color: var(--muted); }
-.bill-steps li { display: inline-flex; align-items: center; gap: 8px; }
-.bill-steps b { font-family: var(--mono); font-weight: 500; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; border: 1px solid var(--line); color: var(--text); font-size: 12px; }
+.bill h1 { font-size: clamp(32px, 6.5vw, 56px); max-width: 720px; }
+.bill h1 em { font-style: normal; color: var(--accent-text); }
+.bill-ctas { display: grid; justify-items: center; gap: 8px; }
+.bill-rule { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 460px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* The first move, playable on the landing page */
+.bill-start { display: grid; gap: 12px; width: 100%; }
+.bill-start > p { font-size: 15px; color: var(--muted); }
+.bill-start > p b { color: var(--text); }
+.bill-faces { list-style: none; margin: 0; padding: 4px 2px 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.bill-faces li { animation: rise .4s ease-out both; }
+.bill-faces button {
+  display: grid; justify-items: center; gap: 6px; width: 92px; padding: 8px 4px; border: 1px solid transparent; border-radius: 10px;
+  background: none; font-size: 12.5px; font-weight: 600; line-height: 1.25; text-align: center;
+}
+.bill-faces button:hover { background: var(--surface); border-color: var(--line); }
+.bill-faces button:hover .avatar { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.bill-face-art { position: relative; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 720px) {
@@ -692,7 +707,11 @@ div.face .avatar { opacity: .85; }
   .bill-gap { gap: 5px; margin-bottom: 70px; }
   .bill-gap i { width: 10px; height: 10px; }
   .bill-film b { font-size: 16px; }
-  .bill-steps { flex-direction: column; align-items: flex-start; }
+  /* One swipeable row of faces on phones */
+  .bill-faces { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0 -16px; padding: 4px 16px 8px; scrollbar-width: none; }
+  .bill-faces button { width: 80px; }
+  .bill-faces .avatar-lg { width: 60px; height: 60px; }
+  .bill h1 { font-size: 30px; }
   .dist-row { grid-template-columns: 76px 1fr 24px; }
 }
 @media (prefers-reduced-motion: reduce) {

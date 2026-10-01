@@ -1,26 +1,45 @@
 import { useMemo } from 'react'
-import { Icon, LangTag, Poster } from './Bits'
-import type { Index } from '../lib/graph'
+import { Avatar, Icon, LangTag, Poster, ROLE_ICON } from './Bits'
+import type { Index, Role } from '../lib/graph'
 import { puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 
 interface Props {
   idx: Index | null
   file: PuzzleFile | null
   today: string
+  /** Links a friend used today, when the visitor arrived from their share link. */
+  challenge: { links: number } | null
+  onStartFrom: (personId: string) => void
   onPlayDaily: () => void
   onPlayRandom: () => void
 }
 
+const ROLE_ORDER: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
+// Matches the generator's route band: forgiving early in the week, tight at the weekend.
+const DIFFICULTY = ['Hard', 'Easy', 'Easy', 'Medium', 'Medium', 'Medium', 'Hard']
+const REPO = 'https://github.com/advaithvemurisai/filmi-link#puzzle-pipeline'
+
 /**
- * First-visit page: today's two films as a double bill and one question. Returning players skip
- * straight to the game, so this only has to sell the first puzzle.
+ * First-visit page: today's two films as a double bill, and the puzzle's first move. Tapping a face
+ * starts the daily with that person already in the chain. Returning players skip this page.
  */
-export default function Landing({ idx, file, today, onPlayDaily, onPlayRandom }: Props) {
+export default function Landing({ idx, file, today, challenge, onStartFrom, onPlayDaily, onPlayRandom }: Props) {
   const puzzleNo = file ? puzzleNumber(file, today) : null
   const puzzle = file ? puzzleFor(file, today) : null
   const ready = idx && puzzle
   const languages = useMemo(() => (idx ? new Set(Object.values(idx.data.films).map((f) => f.l)).size : 0), [idx])
-  const date = new Date(today + 'T00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  const day = new Date(today + 'T00:00')
+  const date = day.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+
+  // The start film's director, composer and top-billed cast: the first move, playable right here.
+  const faces = useMemo(() => {
+    if (!idx || !puzzle) return []
+    const seen = new Set<string>()
+    return [...(idx.filmCredits[puzzle.s] ?? [])]
+      .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
+      .filter((c) => !seen.has(c.id) && seen.add(c.id))
+      .slice(0, 8)
+  }, [idx, puzzle])
 
   return (
     <div className="landing">
@@ -33,8 +52,16 @@ export default function Landing({ idx, file, today, onPlayDaily, onPlayRandom }:
       </header>
 
       <section className="bill" id="top">
-        <p className="bill-kicker">{puzzleNo ? `Daily #${puzzleNo}` : 'Daily'} · {date}</p>
+        <p className="bill-kicker">
+          {puzzleNo ? `Daily #${puzzleNo}` : 'Daily'} · {date} · {DIFFICULTY[day.getDay()]}
+        </p>
         {puzzle?.theme && <p className="theme-ribbon">{puzzle.theme}</p>}
+
+        <h1>
+          {challenge
+            ? <>A friend linked these in {challenge.links} link{challenge.links === 1 ? '' : 's'}. <em>Can you beat it?</em></>
+            : 'Can you connect them?'}
+        </h1>
 
         <div className="bill-posters">
           {ready ? (
@@ -62,25 +89,43 @@ export default function Landing({ idx, file, today, onPlayDaily, onPlayRandom }:
           )}
         </div>
 
-        <h1>Can you connect them?</h1>
-        <p className="bill-lede">
-          Hop from film to film through the people who made them: actors, directors, composers.
-          {puzzle ? ` The shortest chain is ${puzzle.par} people.` : ''}
-        </p>
+        {ready && faces.length > 0 && (
+          <div className="bill-start">
+            <p>Tap anyone who worked on <b>{idx.data.films[puzzle.s].t}</b> to start:</p>
+            <ul className="bill-faces">
+              {faces.map((c, i) => (
+                <li key={c.id} style={{ animationDelay: `${300 + i * 50}ms` }}>
+                  <button onClick={() => onStartFrom(c.id)} title={`Start with ${idx.data.people[c.id].n}`}>
+                    <span className="bill-face-art">
+                      <Avatar idx={idx} id={c.id} size="lg" />
+                      {c.role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[c.role]} size={12} /></span>}
+                    </span>
+                    <span>{idx.data.people[c.id].n}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="bill-ctas">
           <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
           <button className="link-btn" onClick={onPlayRandom} disabled={!idx}>or try a random chain</button>
         </div>
 
-        <ol className="bill-steps">
-          <li><b>1</b> Start at a film</li>
-          <li><b>2</b> Hop through someone who worked on it</li>
-          <li><b>3</b> Reach the target in the fewest links</li>
-        </ol>
+        <p className="bill-rule">
+          Hop film → person → film through actors, directors and composers.
+          {puzzle ? ` Reach the target in ${puzzle.par} links for a Blockbuster.` : ''}
+        </p>
       </section>
 
       <footer className="footer">
-        {idx && <p>{idx.data.meta.films.toLocaleString('en-IN')} films · {languages} languages · a new puzzle every midnight</p>}
+        {idx && (
+          <p>
+            {idx.data.meta.films.toLocaleString('en-IN')} films · {languages} languages · a new puzzle every midnight ·{' '}
+            <a href={REPO} target="_blank" rel="noreferrer">How the puzzles are made →</a>
+          </p>
+        )}
         <p>
           Film data from <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">TMDb</a>. This product
           uses the TMDb API but is not endorsed or certified by TMDb.

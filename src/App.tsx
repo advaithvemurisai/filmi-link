@@ -20,11 +20,29 @@ const BASE = import.meta.env.BASE_URL
 type Route = 'landing' | 'play'
 const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsWith('play') ? 'play' : 'landing')
 
+/** A friend's share link carries their score: `?c=<puzzle no>-<links>`. */
+export interface Challenge { no: number; links: number }
+function parseChallenge(): Challenge | null {
+  const m = /^(\d{1,5})-(\d{1,2})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
+  return m ? { no: Number(m[1]), links: Number(m[2]) } : null
+}
+// Read once at load, before the returning-player redirect rewrites the URL.
+const CHALLENGE = parseChallenge()
+
+const flag = (k: string, v?: boolean) => {
+  try {
+    if (v === undefined) return !!localStorage.getItem(k)
+    if (v) localStorage.setItem(k, '1')
+    else localStorage.removeItem(k)
+  } catch { /* storage unavailable */ }
+  return false
+}
+
 /** Returning players land straight in the game; the landing page is for first visits and shared links. */
 function initialRoute(): Route {
   const r = routeFromPath()
   if (r === 'landing' && hasPlayed()) {
-    history.replaceState(null, '', `${BASE}play`)
+    history.replaceState(null, '', `${BASE}play${location.search}`)
     return 'play'
   }
   return r
@@ -63,6 +81,7 @@ export default function App() {
   const [settings, setSettings] = useState(loadSettings)
   const [homeResults, setHomeResults] = useState<Record<string, Result>>(() => (settings.home ? loadResults(settings.home) : {}))
   const [route, setRoute] = useState<Route>(initialRoute)
+  const [coach, setCoach] = useState(() => flag('fl:coach'))
   const [account, setAccount] = useState<Account | null>(loadAccount)
   const [welcome, setWelcome] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState(0)
@@ -138,15 +157,11 @@ export default function App() {
     fetchRouteShare(account, today).then(setRouteShare).catch(() => setRouteShare(null))
   }, [account, syncedAt, todays, today])
 
-  // First time someone reaches the game, run the guided example.
+  // First time someone reaches the game, run the guided example (unless they already started from a face).
   useEffect(() => {
-    if (route !== 'play' || !idx) return
-    try {
-      if (!localStorage.getItem('fl:seen')) {
-        setSheet('how')
-        localStorage.setItem('fl:seen', '1')
-      }
-    } catch { /* ignore */ }
+    if (route !== 'play' || !idx || flag('fl:seen')) return
+    setSheet('how')
+    flag('fl:seen', true)
   }, [route, idx])
 
   const playRandom = useCallback(
@@ -165,6 +180,20 @@ export default function App() {
   }
 
   const streak = computeStats(results, today).streak
+  // A challenge only counts for today's India daily.
+  const challenge = CHALLENGE && file && CHALLENGE.no === puzzleNumber(file, today) ? CHALLENGE : null
+
+  /** Start today's daily from the landing page with a first person already picked. */
+  const startFrom = (personId: string) => {
+    const pz = file && puzzleFor(file, today)
+    if (!pz) return
+    saveProgress(today, { path: [{ kind: 'film', id: pz.s }, { kind: 'person', id: personId }], startedAt: Date.now(), hints: 0 })
+    flag('fl:seen', true)
+    flag('fl:coach', true)
+    setCoach(true)
+    setMode({ kind: 'daily', date: today, track: 'all' })
+    navigate('play')
+  }
 
   if (route === 'landing') {
     return (
@@ -172,6 +201,8 @@ export default function App() {
         idx={idx}
         file={file}
         today={today}
+        challenge={challenge}
+        onStartFrom={startFrom}
         onPlayDaily={() => { setMode({ kind: 'daily', date: today, track: 'all' }); navigate('play') }}
         onPlayRandom={() => { playRandom(3); navigate('play') }}
       />
@@ -270,11 +301,18 @@ export default function App() {
           hard={settings.hard}
           shareTitle={shareTitle}
           isToday={mode.kind === 'daily' && mode.date === today}
+          dailyNo={mode.kind === 'daily' && track === 'all' ? dailyNo : null}
+          challenge={mode.kind === 'daily' && mode.date === today && track === 'all' && challenge ? challenge.links : null}
+          coach={coach && mode.kind === 'daily'}
           routeShare={mode.kind === 'daily' && mode.date === today && track === 'all' ? routeShare : null}
           initialResult={mode.kind === 'daily' ? activeResults[mode.date] ?? null : null}
           initialProgress={mode.kind === 'daily' ? validProgress(idx, mode.date, puzzle.s, track) : null}
           onProgress={(p) => mode.kind === 'daily' && saveProgress(mode.date, p, track)}
           onFinish={(r) => {
+            if (coach) {
+              flag('fl:coach', false)
+              setCoach(false)
+            }
             if (mode.kind !== 'daily') return
             saveTrackResults({ ...activeResults, [mode.date]: { ...r, live: mode.date === today } })
           }}
