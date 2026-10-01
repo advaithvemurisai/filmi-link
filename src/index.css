@@ -437,6 +437,7 @@ div.face .avatar { opacity: .85; }
 .rm-edge { stroke-linecap: round; fill: none; }
 .rm-mine { stroke: var(--text); stroke-width: 3; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .5s ease-out forwards; animation-delay: calc(var(--d) + 200ms); }
 .rm-best { stroke: var(--accent-text); stroke-width: 2.5; stroke-dasharray: 5 5; opacity: 0; animation: fade-in .5s ease-out forwards; animation-delay: calc(var(--d) + 400ms); }
+.rm-alt { stroke: var(--muted); stroke-width: 2.5; stroke-dasharray: 5 5; opacity: 0; animation: fade-in .5s ease-out forwards; animation-delay: calc(var(--d) + 400ms); }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes fade-in { to { opacity: .9; } }
 .rm-node { position: absolute; transform: translate(-50%, -50%); animation: node-in .4s cubic-bezier(.3,1.5,.5,1) both; animation-delay: var(--d); }
@@ -449,6 +450,7 @@ div.face .avatar { opacity: .85; }
 .routemap-key i { display: inline-block; width: 18px; height: 0; }
 .key-mine { border-top: 3px solid var(--text); }
 .key-best { border-top: 3px dashed var(--accent-text); }
+.key-alt { border-top: 3px dashed var(--muted); }
 
 .dyk { display: flex; gap: 16px; align-items: center; padding: 16px 18px; border-radius: 12px; background: var(--bg-2); border-left: 3px solid var(--t-blockbuster); }
 .dyk .kicker { color: var(--t-blockbuster); }

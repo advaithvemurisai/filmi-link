@@ -14,7 +14,8 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
     const same = mine && best && mine.length === best.length && mine.every((n, i) => key(n) === key(best[i]))
     const routes = [
       mine && { path: mine, cls: 'mine', y: best && !same ? 26 : 50 },
-      best && !same && { path: best, cls: 'best', y: mine ? 74 : 50 },
+      // If your chain is already as short, the other route is an alternative, not a correction.
+      best && !same && { path: best, cls: mine && mine.length === best.length ? 'alt' : 'best', y: mine ? 74 : 50 },
     ].filter(Boolean) as { path: Node[]; cls: string; y: number }[]
 
     const counts = new Map<string, number>()
@@ -83,9 +84,11 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
         </div>
       </div>
       <figcaption className="routemap-key">
-        {mine && <span><i className="key-mine" /> Your chain</span>}
+        {mine && best && mine.length === best.length
+          ? <span><i className="key-mine" /> <Icon name="check" size={13} /> Your chain, a shortest chain</span>
+          : mine && <span><i className="key-mine" /> Your chain</span>}
         {layout.routes.some((r) => r.cls === 'best') && <span><i className="key-best" /> Shortest chain</span>}
-        {mine && best && layout.routes.length === 1 && <span><Icon name="check" size={13} /> Your chain is a shortest chain</span>}
+        {layout.routes.some((r) => r.cls === 'alt') && <span><i className="key-alt" /> Another shortest chain</span>}
       </figcaption>
     </figure>
   )
