@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Avatar, Icon, LangTag, Poster, ROLE_ICON } from './Bits'
-import Programme from './Programme'
+import Credits from './Credits'
 import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
 import { puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
@@ -53,16 +53,19 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
       </header>
 
       <section className="bill" id="top">
-        <p className="bill-kicker">
-          {puzzleNo ? `Daily #${puzzleNo}` : 'Daily'} · {date} · {DIFFICULTY[day.getDay()]}
+        {/* A cinema letterboard: today's show, put up by hand. */}
+        <div className="marquee">
+          <p className="marquee-top">Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date}</p>
+          <h1>
+            {challenge
+              ? <>A friend did it in {challenge.links} link{challenge.links === 1 ? '' : 's'}. <em>Can you beat that?</em></>
+              : 'Can you connect them?'}
+          </h1>
+        </div>
+        <p className="bill-meta">
+          <span>{DIFFICULTY[day.getDay()]} today</span>
+          {puzzle?.theme && <span className="theme-ribbon">{puzzle.theme}</span>}
         </p>
-        {puzzle?.theme && <p className="theme-ribbon">{puzzle.theme}</p>}
-
-        <h1>
-          {challenge
-            ? <>A friend linked these in {challenge.links} link{challenge.links === 1 ? '' : 's'}. <em>Can you beat it?</em></>
-            : 'Can you connect them?'}
-        </h1>
 
         <div className="bill-posters">
           {ready ? (
@@ -113,32 +116,24 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
           <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
           <button className="link-btn" onClick={onPlayRandom} disabled={!idx}>or try a random chain</button>
         </div>
-
-        <p className="bill-rule">
-          Hop film → person → film through actors, directors and composers.
-          {puzzle ? ` Reach the target in ${puzzle.par} links for a Blockbuster.` : ''}
-        </p>
       </section>
 
-      <section className="scene" id="learn">
-        <p className="scene-kicker">Try it</p>
-        <h2>Learn it in 20 seconds</h2>
-        <p className="scene-lede">Tap through a real chain. This is the whole game.</p>
-        <div className="screening">
-          <p className="screening-bar"><span>Now showing</span><span>A 2-link chain</span></p>
+      <div className="interval" role="separator" aria-label="Interval"><span>Interval</span></div>
+
+      <section className="short" id="learn">
+        <h2>A short film before the feature</h2>
+        <p>Twenty seconds, two links. Tap the right person, then the right film.</p>
+        <div className="screen">
           {idx
-            ? <Walkthrough idx={idx} doneLabel="Play today’s puzzle" onDone={onWalkthroughDone} />
-            : <div className="bill-skeleton screening-skeleton" />}
+            ? <Walkthrough idx={idx} doneLabel="Now play today’s" onDone={onWalkthroughDone} />
+            : <div className="bill-skeleton screen-skeleton" />}
         </div>
       </section>
 
-      <section className="scene" id="inside">
-        <p className="scene-kicker">The programme</p>
-        <h2>What’s inside</h2>
-        <Programme />
-        <div className="scene-cta">
-          <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
-        </div>
+      <section className="end-credits" id="inside">
+        <Credits />
+        <p className="credits-fin">and a new show every midnight</p>
+        <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
       </section>
 
       <footer className="footer">
