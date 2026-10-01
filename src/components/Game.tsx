@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
 import { localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
-import { collectCast, ratingFor, type Progress, type Result } from '../lib/storage'
+import { MAX_SECONDS, collectCast, ratingFor, type Progress, type Result } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, ROLE_ICON, Stamp, launchFrom } from './Bits'
 import RouteMap from './RouteMap'
 
@@ -117,7 +117,7 @@ export default function Game(props: Props) {
   function finish(finalPath: Node[], gaveUp: boolean) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
     const r = {
-      links: linkCount(finalPath), par: puzzle.par, seconds: Math.round((Date.now() - startedAt) / 1000),
+      links: linkCount(finalPath), par: puzzle.par, seconds: Math.min(MAX_SECONDS, Math.round((Date.now() - startedAt) / 1000)),
       hints, gaveUp, path: finalPath,
     }
     if (!gaveUp) setNewFaces(collectCast(finalPath, localDateKey()).length)
@@ -152,7 +152,7 @@ export default function Game(props: Props) {
     finish(path, true)
   }
 
-  const seconds = result ? result.seconds : Math.round((now - startedAt) / 1000)
+  const seconds = result ? result.seconds : Math.min(MAX_SECONDS, Math.round((now - startedAt) / 1000))
   const isHint = (n: Node) => hint?.kind === n.kind && hint.id === n.id
   const deadEnd = !q && options.every((o) => inPath.has(`${o.node.kind}:${o.node.id}`))
 

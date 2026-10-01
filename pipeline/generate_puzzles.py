@@ -65,6 +65,7 @@ MAX_LINKS = 6
 # Endpoints must be films a common player could know: mainstream casts, no documentaries or silents.
 MIN_STAR_POWER = 15      # mean film count of the top 3 billed actors
 MIN_YEAR = 1960
+MIN_CONNECTED_PEOPLE = 6  # people with another film: the landing page offers them as a first move
 SKIP_GENRES = {"Documentary", "TV Movie"}
 # How widely each industry's films are watched across India; scales familiarity on the shared daily
 # so language rotation doesn't keep reaching for little-seen films from smaller industries.
@@ -149,8 +150,11 @@ class Graph:
             leads = [self.pi[p] for p, r in rows if r == "Actor"][:3]
             if leads:
                 self.star[self.fi[fid]] = degree[leads].mean()
+        # Anyone in only this film is a dead end, so a film needs enough connected people to start from.
+        connected = np.asarray(self.B @ (degree > 1).astype(float)).ravel()
         self.eligible = np.array([
             self.star[i] >= MIN_STAR_POWER and (self.year[i] or 0) >= MIN_YEAR and not genres[i] & SKIP_GENRES
+            and connected[i] >= MIN_CONNECTED_PEOPLE
             for i in range(F)
         ])
 

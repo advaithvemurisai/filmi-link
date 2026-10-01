@@ -224,15 +224,34 @@ export function PlayerBadge({ name, size = 'md' }: { name: string; size?: 'sm' |
   return <span className={`player-badge player-${size}`} aria-hidden>{initials(name)}</span>
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    // Keyboard users: focus moves into the dialog, Tab stays inside it, and closing returns focus to where it was.
+    const opener = document.activeElement as HTMLElement | null
+    const first = box.current?.querySelector<HTMLElement>('.modal-body ' + FOCUSABLE.split(', ').join(', .modal-body '))
+    ;(first ?? box.current)?.focus({ preventScroll: true })
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return onClose()
+      if (e.key !== 'Tab' || !box.current) return
+      const items = [...box.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.offsetParent !== null)
+      if (!items.length) return e.preventDefault()
+      const at = items.indexOf(document.activeElement as HTMLElement)
+      const next = e.shiftKey ? (at <= 0 ? items.length - 1 : at - 1) : (at === items.length - 1 ? 0 : at + 1)
+      e.preventDefault()
+      items[next].focus()
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (opener?.isConnected) opener.focus({ preventScroll: true })
+    }
   }, [onClose])
   return (
     <div className="scrim" onClick={onClose}>
-      <div className={`modal ${wide ? 'is-wide' : ''}`} role="dialog" aria-modal aria-label={title} onClick={(e) => e.stopPropagation()}>
+      <div ref={box} tabIndex={-1} className={`modal ${wide ? 'is-wide' : ''}`} role="dialog" aria-modal aria-label={title} onClick={(e) => e.stopPropagation()}>
         <header>
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon name="x" size={16} /></button>

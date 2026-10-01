@@ -119,3 +119,20 @@ function filmDistances(idx: Index, start: string): Map<string, number> {
   }
   return dist
 }
+
+/**
+ * The people shown on the landing page as the first move: the film's director, composer and top-billed
+ * cast. Anyone with no other film is left out, since picking them would dead-end the chain at once.
+ */
+/** Fewest faces worth showing as a first move; below this the landing page just offers Play. */
+export const MIN_START_FACES = 3
+
+export function startFaces(idx: Index, filmId: string, n = 8): string[] {
+  const order: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
+  const seen = new Set<string>()
+  return [...(idx.filmCredits[filmId] ?? [])]
+    .sort((a, b) => order[a.role] - order[b.role])
+    .filter((c) => (idx.personFilms[c.id]?.length ?? 0) > 1 && !seen.has(c.id) && seen.add(c.id))
+    .slice(0, n)
+    .map((c) => c.id)
+}

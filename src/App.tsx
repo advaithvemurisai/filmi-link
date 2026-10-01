@@ -12,6 +12,7 @@ import {
   type Result, type Track,
 } from './lib/storage'
 import { fetchRouteShare, loadAccount, saveAccount, sync, SyncError, type Account } from './lib/account'
+import { validChallenge, validResults } from './lib/results'
 
 type Mode = { kind: 'daily'; date: string; track: Track } | { kind: 'free'; puzzle: PuzzleDef; n: number }
 type Sheet = 'how' | 'stats' | 'archive' | 'account' | 'friends' | 'home' | null
@@ -48,16 +49,6 @@ function initialRoute(): Route {
   return r
 }
 
-/** Drop results saved against an older dataset or schedule (ids/puzzles no longer match). */
-function validResults(idx: Index, file: PuzzleFile, results: Record<string, Result>) {
-  const valid: Record<string, Result> = {}
-  for (const [d, r] of Object.entries(results)) {
-    const pz = puzzleFor(file, d)
-    if (pz && r.par === pz.par && isValidChain(idx, r.path, pz.s, r.gaveUp ? undefined : pz.e)) valid[d] = r
-  }
-  return valid
-}
-
 function validProgress(idx: Index, date: string, start: string, track: Track) {
   const p = loadProgress(date, track)
   return p && isValidChain(idx, p.path, start) ? p : null
@@ -73,8 +64,11 @@ export default function App() {
   const [idx, setIdx] = useState<Index | null>(null)
   const [file, setFile] = useState<PuzzleFile | null>(null)
   const [homeFile, setHomeFile] = useState<PuzzleFile | null>(null)
+  const [homeFailed, setHomeFailed] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [today] = useState(localDateKey)
+  const [today, setToday] = useState(localDateKey)
+  /** The day that just ended while this tab was open, so the game can offer the new puzzle. */
+  const [rolledFrom, setRolledFrom] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>({ kind: 'daily', date: today, track: 'all' })
   const [sheet, setSheet] = useState<Sheet>(null)
   const [results, setResults] = useState<Record<string, Result>>(() => loadResults())
@@ -86,6 +80,26 @@ export default function App() {
   const [welcome, setWelcome] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState(0)
   const [routeShare, setRouteShare] = useState<{ count: number; total: number } | null>(null)
+
+  // Follow the clock: a tab left open past midnight should move on to the new day's puzzle.
+  useEffect(() => {
+    const tick = () => setToday((t) => {
+      const now = localDateKey()
+      if (now === t) return t
+      setRolledFrom(t)
+      return now
+    })
+    const timer = setInterval(tick, 15_000)
+    document.addEventListener('visibilitychange', tick)
+    window.addEventListener('focus', tick)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick) }
+  }, [])
+
+  // If the day you were playing is already finished when the clock rolls over, move straight to the new one.
+  useEffect(() => {
+    if (!rolledFrom || mode.kind !== 'daily' || mode.date !== rolledFrom) return
+    if ((mode.track === 'all' ? results : homeResults)[rolledFrom]) setMode({ kind: 'daily', date: today, track: mode.track })
+  }, [rolledFrom, today, mode, results, homeResults])
 
   useEffect(() => {
     const onPop = () => setRoute(routeFromPath())
@@ -113,6 +127,7 @@ export default function App() {
   // The home-industry schedule loads only for players who picked one.
   useEffect(() => {
     setHomeFile(null)
+    setHomeFailed(false)
     if (!settings.home || !idx) return
     const home = settings.home
     fetchJSON<PuzzleFile>(`puzzles-${home}.json`)
@@ -120,7 +135,7 @@ export default function App() {
         setHomeFile(p)
         setHomeResults(validResults(idx, p, loadResults(home)))
       })
-      .catch(() => setHomeFile(null))
+      .catch(() => { setHomeFile(null); setHomeFailed(true) })
   }, [settings.home, idx])
 
   /** Push local results up and adopt the merged set (server keeps the first result per day). */
@@ -181,16 +196,22 @@ export default function App() {
 
   const streak = computeStats(results, today).streak
   // A challenge only counts for today's India daily.
-  const challenge = CHALLENGE && file && CHALLENGE.no === puzzleNumber(file, today) ? CHALLENGE : null
+  const todaysPuzzle = file ? puzzleFor(file, today) : null
+  const challenge = CHALLENGE && file && todaysPuzzle && CHALLENGE.no === puzzleNumber(file, today)
+    && validChallenge(CHALLENGE.links, todaysPuzzle.par) ? CHALLENGE : null
 
   /** Start today's daily from the landing page with a first person already picked. */
   const startFrom = (personId: string) => {
     const pz = file && puzzleFor(file, today)
     if (!pz) return
-    saveProgress(today, { path: [{ kind: 'film', id: pz.s }, { kind: 'person', id: personId }], startedAt: Date.now(), hints: 0 })
+    // Never clobber a game already under way or finished today; only a fresh daily starts from the face.
+    const underway = (validProgress(idx!, today, pz.s, 'all')?.path.length ?? 0) > 1
+    if (!results[today] && !underway) {
+      saveProgress(today, { path: [{ kind: 'film', id: pz.s }, { kind: 'person', id: personId }], startedAt: Date.now(), hints: 0 })
+      flag('fl:coach', true)
+      setCoach(true)
+    }
     flag('fl:seen', true)
-    flag('fl:coach', true)
-    setCoach(true)
     setMode({ kind: 'daily', date: today, track: 'all' })
     navigate('play')
   }
@@ -273,6 +294,8 @@ export default function App() {
           <button role="tab" aria-selected={isDaily(home)} className={isDaily(home) ? 'on' : ''} onClick={() => openDaily(home)}>
             <Icon name="home" size={15} /> {langName(home)} daily
           </button>
+        ) : home && !homeFailed ? (
+          <button disabled className="is-loading"><Icon name="home" size={15} /> {langName(home)} daily</button>
         ) : (
           <button className="track-add" onClick={() => setSheet('home')}><Icon name="plus" size={15} /> Home cinema</button>
         )}
@@ -280,6 +303,15 @@ export default function App() {
           <button className="track-edit" onClick={() => setSheet('home')} aria-label="Change home cinema">Change</button>
         )}
       </div>
+
+      {rolledFrom && mode.kind === 'daily' && mode.date === rolledFrom && (
+        <div className="new-day" role="status">
+          <span>A new puzzle is ready.</span>
+          <button className="btn primary sm" onClick={() => setMode({ kind: 'daily', date: today, track })}>
+            Play #{puzzleNumber(activeFile, today)}
+          </button>
+        </div>
+      )}
 
       {welcome && <div className="toast" role="status" onAnimationEnd={() => setWelcome(null)}>{welcome}</div>}
 

@@ -87,6 +87,7 @@ const failKey = (key: string) => `cl:fail:${key}`
 const MAX_FAILS = 8
 const LOCKOUT_SECONDS = 15 * 60
 const ROUTE_TTL = 3 * 86400
+const MAX_SECONDS = 7 * 86400
 
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.-]{1,19}$/u
 const PIN_RE = /^\d{4}$/
@@ -119,7 +120,9 @@ const int = (v: unknown, max: number) =>
 function cleanEntry(v: unknown): Entry | null {
   if (!v || typeof v !== 'object') return null
   const r = v as Record<string, unknown>
-  const links = int(r.links, 50), par = int(r.par, 20), seconds = int(r.seconds, 7 * 86400), hints = int(r.hints, 50)
+  const links = int(r.links, 50), par = int(r.par, 20), hints = int(r.hints, 50)
+  // An implausibly long time is clamped rather than losing the whole result (and the player's streak with it).
+  const seconds = typeof r.seconds === 'number' && Number.isInteger(r.seconds) && r.seconds >= 0 ? Math.min(r.seconds, MAX_SECONDS) : null
   if (links === null || par === null || seconds === null || hints === null) return null
   if (!Array.isArray(r.path) || r.path.length > 101) return null
   const path: Node[] = []

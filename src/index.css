@@ -144,6 +144,9 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .tracks button:hover, .segmented button:hover { color: var(--text); border-color: var(--muted); }
 .tracks button.on, .segmented button.on { background: var(--text); border-color: var(--text); color: var(--bg); }
 .tracks .track-add { border-style: dashed; }
+.tracks button.is-loading { opacity: .6; cursor: default; }
+.new-day { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--accent-text); background: var(--accent-soft); font-size: 14px; }
+.modal:focus { outline: none; }
 .tracks .track-edit { border: 0; padding: 6px 4px; font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; }
 .segmented { justify-content: center; }
 
@@ -713,6 +716,16 @@ div.face .avatar { opacity: .85; }
   .bill-faces .avatar-lg { width: 60px; height: 60px; }
   .bill h1 { font-size: 30px; }
   .dist-row { grid-template-columns: 76px 1fr 24px; }
+}
+/* Short landscape phones: shrink the double bill so the first move is still near the top. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .bill { gap: 10px; padding-top: 8px; }
+  .bill-posters { grid-template-columns: minmax(0, 100px) auto minmax(0, 100px); gap: 12px; margin-top: 0; }
+  .bill-film b { font-size: 14px; }
+  .bill-film span { display: none; }
+  .bill-gap { margin-bottom: 0; }
+  .bill h1 { font-size: 26px; }
+  .bill-start > p { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }

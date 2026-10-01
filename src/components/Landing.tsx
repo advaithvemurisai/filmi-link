@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Avatar, Icon, LangTag, Poster, ROLE_ICON } from './Bits'
-import type { Index, Role } from '../lib/graph'
+import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
 import { puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 
 interface Props {
@@ -14,7 +14,6 @@ interface Props {
   onPlayRandom: () => void
 }
 
-const ROLE_ORDER: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
 // Matches the generator's route band: forgiving early in the week, tight at the weekend.
 const DIFFICULTY = ['Hard', 'Easy', 'Easy', 'Medium', 'Medium', 'Medium', 'Hard']
 const REPO = 'https://github.com/advaithvemurisai/filmi-link#puzzle-pipeline'
@@ -34,11 +33,9 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onPl
   // The start film's director, composer and top-billed cast: the first move, playable right here.
   const faces = useMemo(() => {
     if (!idx || !puzzle) return []
-    const seen = new Set<string>()
-    return [...(idx.filmCredits[puzzle.s] ?? [])]
-      .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
-      .filter((c) => !seen.has(c.id) && seen.add(c.id))
-      .slice(0, 8)
+    const roles = new Map((idx.filmCredits[puzzle.s] ?? []).map((c) => [c.id, c.role]))
+    const ids = startFaces(idx, puzzle.s)
+    return ids.length >= MIN_START_FACES ? ids.map((id) => ({ id, role: roles.get(id)! })) : []
   }, [idx, puzzle])
 
   return (

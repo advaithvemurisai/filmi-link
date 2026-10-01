@@ -12,16 +12,21 @@ export interface Result {
   live: boolean
 }
 export interface Progress { path: Node[]; startedAt: number; hints: number }
+/** A chain left untouched for days shouldn't record days of play time; the server also bounds this. */
+export const MAX_SECONDS = 12 * 3600
 /** `home` is the language of the player's optional home-industry daily. */
 export interface Settings { hard: boolean; home?: string }
 
 /** Which daily: the shared pan-India one, or a home-industry one by language code. */
 export type Track = 'all' | string
 
+/** Parsed value if it has the same shape as the fallback; a corrupted or hand-edited entry falls back instead of crashing. */
 const read = <T,>(k: string, fallback: T): T => {
   try {
     const raw = localStorage.getItem(k)
-    return raw ? (JSON.parse(raw) as T) : fallback
+    if (!raw) return fallback
+    const v = JSON.parse(raw)
+    return v !== null && typeof v === typeof fallback && Array.isArray(v) === Array.isArray(fallback) ? (v as T) : fallback
   } catch {
     return fallback
   }
@@ -40,7 +45,10 @@ export const saveResults = (all: Record<string, Result>, track: Track = 'all') =
 
 const progressKey = (track: Track, dateKey: string) =>
   track === 'all' ? `fl:progress:${dateKey}` : `fl:progress:${track}:${dateKey}`
-export const loadProgress = (dateKey: string, track: Track = 'all') => read<Progress | null>(progressKey(track, dateKey), null)
+export const loadProgress = (dateKey: string, track: Track = 'all') => {
+  const p = read<Progress | null>(progressKey(track, dateKey), null)
+  return p && Array.isArray(p.path) ? p : null
+}
 export const saveProgress = (dateKey: string, p: Progress, track: Track = 'all') => write(progressKey(track, dateKey), p)
 
 export const loadSettings = () => read<Settings>('fl:settings', { hard: false })

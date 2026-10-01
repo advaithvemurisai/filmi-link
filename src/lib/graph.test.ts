@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
-import { buildIndex, isValidChain, linkCount, randomPuzzle, shortestPath, type GraphData, type Node } from './graph'
+import { buildIndex, isValidChain, linkCount, randomPuzzle, shortestPath, startFaces, type GraphData, type Node } from './graph'
+import { validChallenge, validResults } from './results'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from './daily'
-import { computeStats, ratingFor, type Result } from './storage'
+import { collectCast, computeStats, loadCast, loadProgress, loadResults, ratingFor, type Result } from './storage'
 
 // Tiny graph: A —p1— B —p2— C,  D isolated.
 const tiny: GraphData = {
@@ -118,5 +119,73 @@ describe('stats', () => {
   })
   it('a give-up breaks the streak', () => {
     expect(computeStats({ '2026-09-28': r(2), '2026-09-29': r(2, true, true) }, '2026-09-29').streak).toBe(0)
+  })
+})
+
+describe('results survive data refreshes (QA C4)', () => {
+  const idx = buildIndex(tiny)
+  const file: PuzzleFile = { epoch: '2026-09-01', puzzles: [{ s: 'A', e: 'C', par: 2 }, { s: 'A', e: 'C', par: 1 }] }
+  const chain: Node[] = [{ kind: 'film', id: 'A' }, { kind: 'person', id: 'p1' }, { kind: 'film', id: 'B' }, { kind: 'person', id: 'p2' }, { kind: 'film', id: 'C' }]
+  const result = (par: number): Result => ({ links: 2, par, seconds: 30, hints: 0, gaveUp: false, live: true, path: chain })
+
+  it('keeps a result recorded when par was higher than the schedule now says', () => {
+    const kept = validResults(idx, file, { '2026-09-01': result(3), '2026-09-02': result(2) })
+    expect(Object.keys(kept)).toEqual(['2026-09-01', '2026-09-02'])
+    expect(kept['2026-09-01'].par).toBe(3) // rating stays against the par it was played at
+  })
+  it('still drops a result whose chain no longer exists or is for a different puzzle', () => {
+    const wrongEnd: Result = { ...result(2), path: chain.slice(0, 3) }
+    const gone: Result = { ...result(2), path: [{ kind: 'film', id: 'A' }, { kind: 'person', id: 'p9' }, { kind: 'film', id: 'C' }] }
+    expect(validResults(idx, file, { '2026-09-01': wrongEnd, '2026-09-02': gone })).toEqual({})
+  })
+})
+
+describe('landing first-move faces (QA A3)', () => {
+  it('leaves out people with no other film, keeping order director → music → cast', () => {
+    // B: p1 (director, also in A), p2 (actor, also in C), p3 would dead-end.
+    const data: GraphData = {
+      ...tiny,
+      people: { ...tiny.people, p4: { n: 'Four', i: null } },
+      credits: { ...tiny.credits, B: [['p2', 'Actor'], ['p4', 'Actor'], ['p1', 'Director']] },
+    }
+    const idx = buildIndex(data)
+    expect(startFaces(idx, 'B')).toEqual(['p1', 'p2'])
+  })
+  it('every scheduled India daily offers at least 4 non-dead-end faces', () => {
+    const graph = JSON.parse(readFileSync('public/data/graph.json', 'utf8')) as GraphData
+    const file = JSON.parse(readFileSync('public/data/puzzles.json', 'utf8')) as PuzzleFile
+    const idx = buildIndex(graph)
+    for (const pz of file.puzzles) {
+      const faces = startFaces(idx, pz.s)
+      expect(faces.length, pz.s).toBeGreaterThanOrEqual(4)
+      expect(faces.every((id) => idx.personFilms[id].length > 1), pz.s).toBe(true)
+    }
+  })
+})
+
+describe('challenge links (QA A5)', () => {
+  it('rejects impossible or absurd scores', () => {
+    expect([0, 1, 2].map((n) => validChallenge(n, 3))).toEqual([false, false, false])
+    expect([3, 4, 12].map((n) => validChallenge(n, 3))).toEqual([true, true, true])
+    expect(validChallenge(99, 3)).toBe(false)
+  })
+})
+
+describe('corrupted storage (QA C5)', () => {
+  const store: Record<string, string> = {}
+  beforeEach(() => {
+    for (const k of Object.keys(store)) delete store[k]
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v }, removeItem: (k: string) => { delete store[k] } })
+  })
+  it('falls back for null, wrong-shape and unparseable entries instead of crashing', () => {
+    store['fl:results'] = 'null'
+    store['fl:cast'] = 'null'
+    expect(loadResults()).toEqual({})
+    expect(loadCast()).toEqual({})
+    store['fl:results'] = '[1,2]'; expect(loadResults()).toEqual({})
+    store['fl:results'] = '"text"'; expect(loadResults()).toEqual({})
+    store['fl:results'] = '{oops'; expect(loadResults()).toEqual({})
+    store['fl:progress:2026-09-30'] = '{"path":"nope"}'; expect(loadProgress('2026-09-30')).toBeNull()
+    expect(() => collectCast([{ kind: 'person', id: 'p1' }], '2026-09-30')).not.toThrow()
   })
 })
