@@ -648,6 +648,8 @@ div.face .avatar { opacity: .85; }
 .bill-film .poster { box-shadow: var(--shadow); }
 .bill-film.is-target .poster { outline: 2px solid var(--accent-text); outline-offset: 3px; }
 .bill-film figcaption { display: grid; gap: 4px; justify-items: center; }
+.bill-film small { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.bill-film.is-target small { color: var(--accent-text); }
 .bill-film b { font-family: var(--display); font-size: 19px; font-weight: 500; line-height: 1.15; }
 .bill-film span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .bill-gap { display: flex; align-items: center; gap: 10px; position: relative; padding: 0 4px; margin-bottom: 56px; }
@@ -655,10 +657,17 @@ div.face .avatar { opacity: .85; }
 .bill-gap i { position: relative; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); background: var(--bg); }
 .bill-skeleton { aspect-ratio: 2 / 3; border-radius: 8px; background: var(--surface); animation: shimmer 1.2s ease-in-out infinite alternate; }
 .bill-ctas { display: grid; justify-items: center; gap: 8px; }
+.bill-ctas > span { display: none; }
+.bill-ctas.is-quiet { display: flex; align-items: center; gap: 4px; }
+.bill-ctas.is-quiet > span { display: inline; color: var(--faint); }
 
 /* The first move, playable on the landing page */
 .bill-start { display: grid; gap: 12px; width: 100%; }
-.bill-start > p { font-size: 15px; color: var(--muted); }
+.bill-start > p { font-size: 15px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.step-no {
+  width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
+  background: var(--accent); color: var(--accent-ink); font-family: var(--mono); font-size: 12px; font-weight: 500;
+}
 .bill-start > p b { color: var(--text); }
 .bill-faces { list-style: none; margin: 0; padding: 4px 2px 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .bill-faces li { animation: rise .4s ease-out both; }
@@ -689,7 +698,7 @@ div.face .avatar { opacity: .85; }
 .marquee-top { font-family: var(--display); font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: #bfb8ab; }
 .marquee h1 {
   margin-top: 8px; font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
-  font-size: clamp(28px, 5.6vw, 48px); line-height: 1.08; color: #f4efe6;
+  font-size: clamp(28px, 5.6vw, 48px); line-height: 1.08; color: #f4efe6; text-wrap: balance;
 }
 .marquee h1 em { font-style: normal; color: var(--bulb); }
 .bill-meta { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
@@ -699,9 +708,12 @@ div.face .avatar { opacity: .85; }
 .interval::before, .interval::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
 .interval span { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: .5em; text-transform: uppercase; padding-left: .5em; }
 
-.short { padding: 28px 0 8px; display: grid; gap: 8px; }
-.short h2 { font-size: clamp(26px, 4.6vw, 36px); }
-.short > p { color: var(--muted); font-size: 15.5px; line-height: 1.55; margin-bottom: 12px; }
+.short { padding: 28px 0 8px; display: grid; gap: 16px; }
+/* Trailer header: title and runtime on the left, the one-line pitch beside them, like a listing. */
+.short-head { display: grid; grid-template-columns: auto auto 1fr; align-items: baseline; gap: 6px 14px; }
+.short-head h2 { font-size: clamp(30px, 5vw, 44px); text-transform: uppercase; letter-spacing: .04em; }
+.short-runtime { justify-self: start; font-family: var(--mono); font-size: 13px; color: var(--accent-text); border: 1px solid currentColor; border-radius: 4px; padding: 1px 6px; }
+.short-head p { color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 380px; justify-self: end; text-align: right; }
 /* The walkthrough plays on a small screen: dark, slightly vignetted, in both themes. */
 .screen {
   border-radius: 12px; padding: 22px 20px; background: radial-gradient(120% 90% at 50% 40%, var(--surface) 55%, var(--bg-2));
@@ -721,6 +733,25 @@ div.face .avatar { opacity: .85; }
 .credit-stamps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .credit-scripts { display: flex; gap: 6px; margin-top: 6px; }
 .credit-scripts i { font-style: normal; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); font-size: 14px; }
+/* The closing CTA: a cinema ticket with a perforated stub. */
+.ticket {
+  display: flex; align-items: stretch; margin-top: 4px; border: 0; padding: 0; background: none; color: var(--accent-ink);
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,.3)); transition: transform .15s;
+}
+.ticket:hover { transform: translateY(-2px) rotate(-1deg); }
+.ticket:active { transform: scale(.98); }
+.ticket-main, .ticket-stub-end { background: var(--accent); display: grid; align-content: center; }
+.ticket-main {
+  padding: 12px 22px 12px 26px; gap: 2px; text-align: left; border-radius: 8px 0 0 8px;
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px); mask: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px);
+}
+.ticket-main small { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; opacity: .8; }
+.ticket-main b { font-family: var(--display); font-weight: 500; font-size: 21px; letter-spacing: .03em; text-transform: uppercase; }
+.ticket-stub-end {
+  padding: 0 18px; place-items: center; border-radius: 0 8px 8px 0;
+  border-left: 2px dashed rgba(255,255,255,.45);
+  -webkit-mask: radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px); mask: radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px);
+}
 .credits-fin { margin-top: 12px; font-family: var(--display); font-size: 15px; letter-spacing: .2em; text-transform: uppercase; color: var(--faint); }
 
 @media (max-width: 760px) {
@@ -731,6 +762,8 @@ div.face .avatar { opacity: .85; }
   .marquee { padding: 20px 18px 22px; }
   .marquee-top { font-size: 11px; letter-spacing: .18em; }
   .interval span { font-size: 18px; letter-spacing: .4em; }
+  .short-head { grid-template-columns: auto 1fr; }
+  .short-head p { grid-column: 1 / -1; justify-self: start; text-align: left; }
 }
 
 /* ---------- small screens ---------- */

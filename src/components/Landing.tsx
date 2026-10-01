@@ -33,6 +33,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
   const languages = useMemo(() => (idx ? new Set(Object.values(idx.data.films).map((f) => f.l)).size : 0), [idx])
   const day = new Date(today + 'T00:00')
   const date = day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  const links = puzzle ? `${puzzle.par} link${puzzle.par === 1 ? '' : 's'}` : null
 
   // The start film's director, composer and top-billed cast: the first move, playable right here.
   const faces = useMemo(() => {
@@ -55,17 +56,18 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
       <section className="bill" id="top">
         {/* A cinema letterboard: today's show, put up by hand. */}
         <div className="marquee">
-          <p className="marquee-top">Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date}</p>
+          <p className="marquee-top">
+            Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date} · {DIFFICULTY[day.getDay()]}
+          </p>
           <h1>
             {challenge
               ? <>A friend did it in {challenge.links} link{challenge.links === 1 ? '' : 's'}. <em>Can you beat that?</em></>
-              : 'Can you connect them?'}
+              : links
+                ? <>Two films. <em>{links}</em> between them.</>
+                : 'Two films. One chain of people.'}
           </h1>
         </div>
-        <p className="bill-meta">
-          <span>{DIFFICULTY[day.getDay()]} today</span>
-          {puzzle?.theme && <span className="theme-ribbon">{puzzle.theme}</span>}
-        </p>
+        {puzzle?.theme && <p className="bill-meta"><span className="theme-ribbon">{puzzle.theme}</span></p>}
 
         <div className="bill-posters">
           {ready ? (
@@ -73,16 +75,18 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
               <figure className="bill-film">
                 <Poster idx={idx} id={puzzle.s} size="xl" />
                 <figcaption>
+                  <small>From</small>
                   <b>{idx.data.films[puzzle.s].t}</b>
                   <span>{idx.data.films[puzzle.s].y} <LangTag l={idx.data.films[puzzle.s].l} /></span>
                 </figcaption>
               </figure>
-              <div className="bill-gap" aria-label={`Shortest chain: ${puzzle.par} links`}>
+              <div className="bill-gap" aria-label={`Shortest chain: ${links}`}>
                 {Array.from({ length: puzzle.par }, (_, i) => <i key={i} />)}
               </div>
               <figure className="bill-film is-target">
                 <Poster idx={idx} id={puzzle.e} size="xl" />
                 <figcaption>
+                  <small>To</small>
                   <b>{idx.data.films[puzzle.e].t}</b>
                   <span>{idx.data.films[puzzle.e].y} <LangTag l={idx.data.films[puzzle.e].l} /></span>
                 </figcaption>
@@ -95,7 +99,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
 
         {ready && faces.length > 0 && (
           <div className="bill-start">
-            <p>Tap anyone who worked on <b>{idx.data.films[puzzle.s].t}</b> to start:</p>
+            <p><span className="step-no">1</span> Your first move: pick anyone from <b>{idx.data.films[puzzle.s].t}</b></p>
             <ul className="bill-faces">
               {faces.map((c, i) => (
                 <li key={c.id} style={{ animationDelay: `${300 + i * 50}ms` }}>
@@ -112,17 +116,23 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
           </div>
         )}
 
-        <div className="bill-ctas">
-          <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
-          <button className="link-btn" onClick={onPlayRandom} disabled={!idx}>or try a random chain</button>
+        <div className={`bill-ctas ${faces.length > 0 ? 'is-quiet' : ''}`}>
+          {faces.length > 0
+            ? <button className="link-btn" onClick={onPlayDaily}>Open the full puzzle</button>
+            : <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>}
+          <span aria-hidden>·</span>
+          <button className="link-btn" onClick={onPlayRandom} disabled={!idx}>Random chain</button>
         </div>
       </section>
 
       <div className="interval" role="separator" aria-label="Interval"><span>Interval</span></div>
 
       <section className="short" id="learn">
-        <h2>A short film before the feature</h2>
-        <p>Twenty seconds, two links. Tap the right person, then the right film.</p>
+        <header className="short-head">
+          <h2>Trailer</h2>
+          <span className="short-runtime">0:20</span>
+          <p>Every link is a person, then a film they made. Try a two-link chain before today’s show.</p>
+        </header>
         <div className="screen">
           {idx
             ? <Walkthrough idx={idx} doneLabel="Now play today’s" onDone={onWalkthroughDone} />
@@ -133,7 +143,14 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
       <section className="end-credits" id="inside">
         <Credits />
         <p className="credits-fin">and a new show every midnight</p>
-        <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
+        {/* The closing call to action is the ticket you hand over at the door. */}
+        <button className="ticket" onClick={onPlayDaily}>
+          <span className="ticket-main">
+            <small>Admit one</small>
+            <b>Today’s show{puzzleNo ? `, No. ${puzzleNo}` : ''}</b>
+          </span>
+          <span className="ticket-stub-end"><Icon name="play" size={18} /></span>
+        </button>
       </section>
 
       <footer className="footer">
