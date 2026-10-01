@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { Avatar, Icon, LangTag, Poster, ROLE_ICON } from './Bits'
+import Programme from './Programme'
+import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
 import { puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 
@@ -10,6 +12,8 @@ interface Props {
   /** Links a friend used today, when the visitor arrived from their share link. */
   challenge: { links: number } | null
   onStartFrom: (personId: string) => void
+  /** The visitor finished the on-page walkthrough: go play today's puzzle. */
+  onWalkthroughDone: () => void
   onPlayDaily: () => void
   onPlayRandom: () => void
 }
@@ -22,7 +26,7 @@ const REPO = 'https://github.com/advaithvemurisai/filmi-link#puzzle-pipeline'
  * First-visit page: today's two films as a double bill, and the puzzle's first move. Tapping a face
  * starts the daily with that person already in the chain. Returning players skip this page.
  */
-export default function Landing({ idx, file, today, challenge, onStartFrom, onPlayDaily, onPlayRandom }: Props) {
+export default function Landing({ idx, file, today, challenge, onStartFrom, onWalkthroughDone, onPlayDaily, onPlayRandom }: Props) {
   const puzzleNo = file ? puzzleNumber(file, today) : null
   const puzzle = file ? puzzleFor(file, today) : null
   const ready = idx && puzzle
@@ -114,6 +118,27 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onPl
           Hop film → person → film through actors, directors and composers.
           {puzzle ? ` Reach the target in ${puzzle.par} links for a Blockbuster.` : ''}
         </p>
+      </section>
+
+      <section className="scene" id="learn">
+        <p className="scene-kicker">Try it</p>
+        <h2>Learn it in 20 seconds</h2>
+        <p className="scene-lede">Tap through a real chain. This is the whole game.</p>
+        <div className="screening">
+          <p className="screening-bar"><span>Now showing</span><span>A 2-link chain</span></p>
+          {idx
+            ? <Walkthrough idx={idx} doneLabel="Play today’s puzzle" onDone={onWalkthroughDone} />
+            : <div className="bill-skeleton screening-skeleton" />}
+        </div>
+      </section>
+
+      <section className="scene" id="inside">
+        <p className="scene-kicker">The programme</p>
+        <h2>What’s inside</h2>
+        <Programme />
+        <div className="scene-cta">
+          <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>
+        </div>
       </section>
 
       <footer className="footer">

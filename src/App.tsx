@@ -224,6 +224,7 @@ export default function App() {
         today={today}
         challenge={challenge}
         onStartFrom={startFrom}
+        onWalkthroughDone={() => { flag('fl:seen', true); setMode({ kind: 'daily', date: today, track: 'all' }); navigate('play') }}
         onPlayDaily={() => { setMode({ kind: 'daily', date: today, track: 'all' }); navigate('play') }}
         onPlayRandom={() => { playRandom(3); navigate('play') }}
       />
