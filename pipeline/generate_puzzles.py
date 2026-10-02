@@ -295,7 +295,8 @@ def band_score(x: float, lo: int, hi: int) -> np.ndarray:
 
 
 def pool_for(G: Graph, track: str) -> list[int]:
-    order = [f for f in np.argsort(-G.pop) if G.eligible[f]]
+    # Unvoted new releases only ever appear mid-chain, never as a day's endpoints.
+    order = [f for f in np.argsort(-G.pop) if G.eligible[f] and G.pop[f] > 0]
     if track != "all":
         return [f for f in order if G.lang[f] == track][:400]
     pool: set[int] = set()

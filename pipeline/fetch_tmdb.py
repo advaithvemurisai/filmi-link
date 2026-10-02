@@ -37,6 +37,9 @@ CACHE = Path(__file__).resolve().parent / ".cache"
 # Obscure films only ever appear mid-chain; puzzle endpoints come from the most-voted films.
 LANGUAGES = ["hi", "ta", "te", "ml", "kn", "mr", "bn", "pa", "gu", "or", "as"]
 MIN_VOTES = 1
+# New releases often sit at 0 votes for weeks or months, so films from last year onwards skip the vote floor.
+# They still need a person shared with another film to survive pruning, which keeps the junk out.
+MIN_RUNTIME = 60  # drops shorts among the unvoted new releases (TMDb runtime 0 = unknown, kept)
 CAST_PER_FILM = 12
 # Films outside the most-voted FULL_CREDITS_TOP only appear mid-chain; there, people with no other
 # film can't connect anything, so they're pruned to keep graph.json small for phones.
@@ -66,9 +69,10 @@ except ImportError:
     SSL_CTX = ssl.create_default_context()
 
 
-def get(path: str, **params) -> dict:
+def get(path: str, fresh: bool = False, **params) -> dict:
+    """fresh=True skips the cached copy (listings and new releases change week to week)."""
     cache_file = CACHE / (path.strip("/").replace("/", "_") + "_" + urllib.parse.urlencode(sorted(params.items())) + ".json")
-    if cache_file.exists():
+    if cache_file.exists() and not fresh:
         return json.loads(cache_file.read_text())
 
     if KEY and not TOKEN:
@@ -166,16 +170,18 @@ def display_title(d: dict) -> str:
     return best if score(best) >= 0.6 and score(best) - score(d["title"]) > 0.25 else d["title"]
 
 
-def discover(lang: str, quota: float) -> list[dict]:
+def discover(lang: str, quota: float, **filters) -> list[dict]:
+    filters = filters or {"vote_count.gte": MIN_VOTES}
     out, page = [], 1
     while len(out) < quota:
         res = get(
             "/discover/movie",
+            fresh=True,
             with_origin_country="IN",
             with_original_language=lang,
             sort_by="vote_count.desc",
             include_adult="false",
-            **{"vote_count.gte": MIN_VOTES},
+            **filters,
             page=page,
         )
         out.extend(res["results"])
@@ -193,19 +199,33 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=None, help="max films per language (quick trial runs)")
     args = ap.parse_args()
 
+    today = date.today()
+    recent_since = date(today.year - 1, 1, 1).isoformat()
+    window = {"primary_release_date.gte": recent_since, "primary_release_date.lte": today.isoformat()}
     ids: dict[int, str] = {}
+    recent: set[int] = set()
     for lang in LANGUAGES:
         found = discover(lang, args.limit or float("inf"))
-        for m in found:
+        new = [m for m in discover(lang, args.limit or float("inf"), **window) if m["vote_count"] < MIN_VOTES]
+        for m in found + new:
             ids.setdefault(m["id"], lang)
-        print(f"{lang}: {len(found)} films")
+        recent.update(m["id"] for m in new)
+        recent.update(m["id"] for m in found if (m.get("release_date") or "") >= recent_since)
+        print(f"{lang}: {len(found)} films + {len(new)} unvoted new releases")
 
+    # Recent films' credits are still being filled in on TMDb, so refetch them rather than trust the cache.
+    fetch = lambda mid: get(f"/movie/{mid}", fresh=mid in recent, append_to_response="credits,alternative_titles")  # noqa: E731
     with ThreadPoolExecutor(max_workers=12) as pool:
-        details = list(pool.map(lambda mid: get(f"/movie/{mid}", append_to_response="credits,alternative_titles"), ids))
+        details = list(pool.map(fetch, ids))
 
     films, people, credits, meta = {}, {}, {}, {}
     for d in details:
-        if d.get("status") != "Released":
+        # TMDb often leaves new Indian releases on "Post Production" after they're out, so a past release
+        # date counts too. Rumored, Planned and Canceled films stay out whatever their date says.
+        stale = d.get("status") in ("Post Production", "In Production") and (d.get("release_date") or "9999") <= today.isoformat()
+        if d.get("status") != "Released" and not stale:
+            continue
+        if d.get("vote_count", 0) < MIN_VOTES and 0 < (d.get("runtime") or 0) < MIN_RUNTIME:
             continue
         fid = str(d["id"])
         year = int(d["release_date"][:4]) if d.get("release_date") else None

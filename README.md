@@ -20,7 +20,7 @@ Each person is one link. Match the shortest possible chain for a **Blockbuster**
 Most of the work went into making the puzzles fair and interesting, not just solvable.
 
 - **A puzzle generator that scores for fun.** Every day's pair is chosen from about 20 candidates by a scoring model, not picked at random. It weighs how familiar both films are, how many shortest routes exist (forgiving on Monday, tight on Sunday), whether at least one route uses people the game shows up front, and whether every route runs through the same few mega-stars. Par is always the true shortest chain.
-- **Graph maths on sparse matrices.** The film–person graph (about 17,900 films and 16,000 people) is held as scipy sparse incidence matrices, so counting shortest routes for thousands of candidates is fast.
+- **Graph maths on sparse matrices.** The film–person graph (about 18,900 films and 17,000 people) is held as scipy sparse incidence matrices, so counting shortest routes for thousands of candidates is fast.
 - **Fair across industries.** Popularity is ranked within each language, so a Malayalam hit isn't buried under Hindi vote counts. The shared daily keeps rough per-industry shares and penalises recent overuse of a language. Cooldowns stop a film (45 days) or a route-carrying star (14 days) from repeating.
 - **Home-cinema dailies.** Besides the India daily everyone shares, there is an optional daily for Hindi, Tamil, Telugu, Malayalam or Kannada, built only from that industry's films.
 - **Weekly themes.** Released this week, language spotlights, decade weeks and composer weeks.
