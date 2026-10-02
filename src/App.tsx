@@ -4,8 +4,8 @@ import Landing from './components/Landing'
 import { Icon, PlayerBadge, type IconName } from './components/Bits'
 import { Archive, HomePicker, HowTo, Stats } from './components/Modals'
 import { AccountSheet, FriendsSheet } from './components/Social'
-import { buildIndex, isValidChain, randomPuzzle, type GraphData, type Index } from './lib/graph'
-import { localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
+import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type Index, type Node } from './lib/graph'
+import { addDays, localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import { langName } from './lib/format'
 import {
   computeStats, hasPlayed, loadProgress, loadResults, loadSettings, saveProgress, saveResults, saveSettings,
@@ -21,11 +21,14 @@ const BASE = import.meta.env.BASE_URL
 type Route = 'landing' | 'play'
 const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsWith('play') ? 'play' : 'landing')
 
-/** A friend's share link carries their score: `?c=<puzzle no>-<links>`. */
-export interface Challenge { no: number; links: number }
+/**
+ * A friend's share link carries their score and the people/films between the endpoints:
+ * `?c=<puzzle no>-<links>.<id>.<id>…`. The ids are optional (older links have none).
+ */
+export interface Challenge { no: number; links: number; mids: string[] }
 function parseChallenge(): Challenge | null {
-  const m = /^(\d{1,5})-(\d{1,2})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
-  return m ? { no: Number(m[1]), links: Number(m[2]) } : null
+  const m = /^(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,11})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
+  return m ? { no: Number(m[1]), links: Number(m[2]), mids: m[3] ? m[3].slice(1).split('.') : [] } : null
 }
 // Read once at load, before the returning-player redirect rewrites the URL.
 const CHALLENGE = parseChallenge()
@@ -195,24 +198,44 @@ export default function App() {
   }
 
   const streak = computeStats(results, today).streak
-  // A challenge only counts for today's India daily.
-  const todaysPuzzle = file ? puzzleFor(file, today) : null
-  const challenge = CHALLENGE && file && todaysPuzzle && CHALLENGE.no === puzzleNumber(file, today)
-    && validChallenge(CHALLENGE.links, todaysPuzzle.par) ? CHALLENGE : null
+  // A challenge points at one India daily, today's or an earlier one; the friend's chain is rebuilt from the graph.
+  const challenge = (() => {
+    if (!CHALLENGE || !file) return null
+    const date = addDays(file.epoch, CHALLENGE.no - 1)
+    const pz = date <= today ? puzzleFor(file, date) : null
+    if (!pz || !validChallenge(CHALLENGE.links, pz.par)) return null
+    let path: Node[] | null = null
+    if (idx && CHALLENGE.mids.length === CHALLENGE.links - 1) {
+      const full: Node[] = [
+        { kind: 'film', id: pz.s },
+        ...CHALLENGE.mids.map((id, i): Node => ({ kind: i % 2 === 0 ? 'person' : 'film', id })),
+        { kind: 'film', id: pz.e },
+      ]
+      if (isValidChain(idx, full, pz.s, pz.e) && linkCount(full) === CHALLENGE.links) path = full
+    }
+    return { date, links: CHALLENGE.links, path }
+  })()
+  const playDate = challenge?.date ?? today
+
+  // Arriving from a link to an earlier puzzle: open that one instead of today's.
+  useEffect(() => {
+    if (challenge && challenge.date !== today) setMode({ kind: 'daily', date: challenge.date, track: 'all' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!file])
 
   /** Start today's daily from the landing page with a first person already picked. */
   const startFrom = (personId: string) => {
-    const pz = file && puzzleFor(file, today)
+    const pz = file && puzzleFor(file, playDate)
     if (!pz) return
     // Never clobber a game already under way or finished today; only a fresh daily starts from the face.
-    const underway = (validProgress(idx!, today, pz.s, 'all')?.path.length ?? 0) > 1
-    if (!results[today] && !underway) {
-      saveProgress(today, { path: [{ kind: 'film', id: pz.s }, { kind: 'person', id: personId }], startedAt: Date.now(), hints: 0 })
+    const underway = (validProgress(idx!, playDate, pz.s, 'all')?.path.length ?? 0) > 1
+    if (!results[playDate] && !underway) {
+      saveProgress(playDate, { path: [{ kind: 'film', id: pz.s }, { kind: 'person', id: personId }], startedAt: Date.now(), hints: 0 })
       flag('fl:coach', true)
       setCoach(true)
     }
     flag('fl:seen', true)
-    setMode({ kind: 'daily', date: today, track: 'all' })
+    setMode({ kind: 'daily', date: playDate, track: 'all' })
     navigate('play')
   }
 
@@ -221,11 +244,11 @@ export default function App() {
       <Landing
         idx={idx}
         file={file}
-        today={today}
+        today={playDate}
         challenge={challenge}
         onStartFrom={startFrom}
-        onWalkthroughDone={() => { flag('fl:seen', true); setMode({ kind: 'daily', date: today, track: 'all' }); navigate('play') }}
-        onPlayDaily={() => { setMode({ kind: 'daily', date: today, track: 'all' }); navigate('play') }}
+        onWalkthroughDone={() => { flag('fl:seen', true); setMode({ kind: 'daily', date: playDate, track: 'all' }); navigate('play') }}
+        onPlayDaily={() => { setMode({ kind: 'daily', date: playDate, track: 'all' }); navigate('play') }}
         onPlayRandom={() => { playRandom(3); navigate('play') }}
       />
     )
@@ -257,6 +280,7 @@ export default function App() {
     } else setHomeResults(next)
   }
 
+  const friendHere = mode.kind === 'daily' && track === 'all' && !!challenge && mode.date === challenge.date
   const isDaily = (t: Track) => mode.kind === 'daily' && mode.date === today && track === t
   const openDaily = (t: Track) => setMode({ kind: 'daily', date: today, track: t })
 
@@ -335,7 +359,8 @@ export default function App() {
           shareTitle={shareTitle}
           isToday={mode.kind === 'daily' && mode.date === today}
           dailyNo={mode.kind === 'daily' && track === 'all' ? dailyNo : null}
-          challenge={mode.kind === 'daily' && mode.date === today && track === 'all' && challenge ? challenge.links : null}
+          challenge={friendHere ? challenge!.links : null}
+          friendPath={friendHere ? challenge!.path : null}
           coach={coach && mode.kind === 'daily'}
           routeShare={mode.kind === 'daily' && mode.date === today && track === 'all' ? routeShare : null}
           initialResult={mode.kind === 'daily' ? activeResults[mode.date] ?? null : null}

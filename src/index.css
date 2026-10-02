@@ -827,3 +827,10 @@ div.face .avatar { opacity: .85; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- friend's chain ---------- */
+.vs { display: grid; gap: 6px; }
+.vs .strip { margin: 0; }
+.vs-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
+.frame.is-shared .poster, .frame.is-shared .avatar { outline: 2px solid #4fb477; outline-offset: 2px; }
+.frame.is-shared .frame-label { color: #4fb477; }

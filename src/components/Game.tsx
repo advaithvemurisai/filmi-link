@@ -27,6 +27,8 @@ interface Props {
   dailyNo: number | null
   /** Links a friend's share link said they used today, if the player arrived from one. */
   challenge: number | null
+  /** The friend's full chain from their share link, shown next to yours once the puzzle is over. */
+  friendPath: Node[] | null
   /** First game after starting from the landing page: show a one-line guide instead of the tutorial. */
   coach: boolean
   /** How many players took the same route today (pan-India daily, signed-in players only). */
@@ -514,8 +516,30 @@ function NextPuzzle() {
   )
 }
 
+/** Your chain above a friend's, with the frames you both used marked. */
+function FriendChain({ idx, friend, mine }: { idx: Index; friend: Node[]; mine: Node[] | null }) {
+  const key = (n: Node) => `${n.kind}:${n.id}`
+  const mineKeys = new Set((mine ?? []).map(key))
+  const common = new Set(friend.slice(1, -1).map(key).filter((k) => mineKeys.has(k)))
+  const same = !!mine && mine.length === friend.length && mine.every((n, i) => key(n) === key(friend[i]))
+  return (
+    <section className="vs">
+      <p className="kicker">
+        {!mine ? 'Your friend’s chain'
+          : same ? 'You and your friend took the same route'
+          : common.size ? `You shared ${common.size} step${common.size > 1 ? 's' : ''} with your friend`
+          : 'Different routes, same destination'}
+      </p>
+      {mine && <p className="vs-label">You</p>}
+      {mine && <Filmstrip idx={idx} path={mine} shared={common} label="Your chain" />}
+      <p className="vs-label">Friend</p>
+      <Filmstrip idx={idx} path={friend} shared={common} label="Your friend’s chain" />
+    </section>
+  )
+}
+
 function ResultPanel({
-  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo,
+  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, friendPath,
   onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
 }: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null; newFaces: number }) {
   const [copied, setCopied] = useState(false)
@@ -555,7 +579,7 @@ function ResultPanel({
       ? `${blocks} Shelved (shortest ${puzzle.par})`
       : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''}`,
     // A solved India daily links back as a challenge: friends land on "A friend linked these in N links".
-    window.location.origin + import.meta.env.BASE_URL + (dailyNo && !result.gaveUp ? `?c=${dailyNo}-${result.links}` : ''),
+    window.location.origin + import.meta.env.BASE_URL + (dailyNo && !result.gaveUp ? `?c=${dailyNo}-${result.links}${result.path.slice(1, -1).map((n) => `.${n.id}`).join('')}` : ''),
   ].join('\n')
 
   async function doShare() {
@@ -591,6 +615,8 @@ function ResultPanel({
           <button className="btn ghost" onClick={onOpenArchive}><Icon name="archive" size={16} /> Archive</button>
         </div>
       </div>
+
+      {friendPath && <FriendChain idx={idx} friend={friendPath} mine={result.gaveUp ? null : result.path} />}
 
       <RouteMap idx={idx} mine={result.gaveUp ? null : result.path} best={optimal} />
 

@@ -135,7 +135,7 @@ function ghostKinds(current: Node, links: number, par: number): Node['kind'][] {
  * ending on the target, so progress reads at a glance.
  */
 export function Filmstrip({
-  idx, path, onJump, activeIndex, goal, replay, label = 'Your chain',
+  idx, path, onJump, activeIndex, goal, replay, label = 'Your chain', shared,
 }: {
   idx: Index
   path: Node[]
@@ -144,6 +144,8 @@ export function Filmstrip({
   goal?: { par: number; target: string }
   replay?: boolean
   label?: string
+  /** `kind:id` keys of frames to mark as common to another chain. */
+  shared?: Set<string>
 }) {
   const listRef = useRef<HTMLOListElement>(null)
   const prevLen = useRef(path.length)
@@ -170,7 +172,7 @@ export function Filmstrip({
         <li
           key={`${n.kind}${n.id}${i}`}
           data-i={i}
-          className={`frame frame-${n.kind} ${i === activeIndex ? 'is-active' : ''}`}
+          className={`frame frame-${n.kind} ${i === activeIndex ? 'is-active' : ''} ${shared?.has(`${n.kind}:${n.id}`) ? 'is-shared' : ''}`}
           style={replay ? ({ '--d': `${i * 160}ms` } as CSSProperties) : undefined}
         >
           <button type="button" className="frame-body" disabled={!onJump || i === activeIndex} onClick={() => onJump?.(i)} title={nodeLabel(idx, n)}>
