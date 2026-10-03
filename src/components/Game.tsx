@@ -25,6 +25,8 @@ interface Props {
   isToday: boolean
   /** India daily number, so share links can challenge friends to beat the score. */
   dailyNo: number | null
+  /** Free play: share links carry the random pair so friends can play it too. */
+  free: boolean
   /** Links a friend's share link said they used today, if the player arrived from one. */
   challenge: number | null
   /** The friend's full chain from their share link, shown next to yours once the puzzle is over. */
@@ -539,8 +541,18 @@ function FriendChain({ idx, friend, mine }: { idx: Index; friend: Node[]; mine: 
   )
 }
 
+/**
+ * A solved India daily links back as a challenge: friends land on "A friend linked these in N links".
+ * A random chain links to the same pair of films, with the score and chain when it was solved.
+ */
+function shareQuery(puzzle: PuzzleDef, result: Omit<Result, 'live'>, dailyNo: number | null, free: boolean) {
+  const score = result.gaveUp ? '' : `-${result.links}${result.path.slice(1, -1).map((n) => `.${n.id}`).join('')}`
+  if (free) return `?r=${puzzle.s}.${puzzle.e}${score}`
+  return dailyNo && score ? `?c=${dailyNo}${score}` : ''
+}
+
 function ResultPanel({
-  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, friendPath,
+  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, free, friendPath,
   onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
 }: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null; newFaces: number }) {
   const [copied, setCopied] = useState(false)
@@ -579,8 +591,7 @@ function ResultPanel({
     result.gaveUp
       ? `${blocks} Shelved (shortest ${puzzle.par})`
       : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''}`,
-    // A solved India daily links back as a challenge: friends land on "A friend linked these in N links".
-    window.location.origin + import.meta.env.BASE_URL + (dailyNo && !result.gaveUp ? `?c=${dailyNo}-${result.links}${result.path.slice(1, -1).map((n) => `.${n.id}`).join('')}` : ''),
+    window.location.origin + import.meta.env.BASE_URL + shareQuery(puzzle, result, dailyNo, free),
   ].join('\n')
 
   async function doShare() {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { buildIndex, isValidChain, linkCount, randomPuzzle, shortestPath, startFaces, type GraphData, type Node } from './graph'
-import { validChallenge, validResults } from './results'
+import { freeFromLink, parseFreeLink, validChallenge, validResults } from './results'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from './daily'
 import { collectCast, computeStats, loadCast, loadProgress, loadResults, ratingFor, type Result } from './storage'
 
@@ -39,6 +39,33 @@ describe('shortestPath', () => {
   })
   it('returns null when unreachable', () => {
     expect(shortestPath(idx, { kind: 'film', id: 'A' }, 'D')).toBeNull()
+  })
+})
+
+describe('free-play share links', () => {
+  const idx = buildIndex(tiny)
+  it('parses the pair, with the score and chain when present', () => {
+    expect(parseFreeLink('?r=12.34')).toEqual({ s: '12', e: '34', links: null, mids: [] })
+    expect(parseFreeLink('?r=12.34-2.5.6.7')).toEqual({ s: '12', e: '34', links: 2, mids: ['5', '6', '7'] })
+    expect(parseFreeLink('?r=12')).toBeNull()
+    expect(parseFreeLink('?c=1-2')).toBeNull()
+  })
+  it('rebuilds the puzzle and par from the graph', () => {
+    expect(freeFromLink(idx, { s: 'A', e: 'C', links: null, mids: [] })).toEqual({ puzzle: { s: 'A', e: 'C', par: 2 } })
+  })
+  it("rebuilds the friend's chain when it is valid", () => {
+    const r = freeFromLink(idx, { s: 'A', e: 'C', links: 2, mids: ['p1', 'B', 'p2'] })!
+    expect(r.friend?.links).toBe(2)
+    expect(r.friend?.path?.map((n) => n.id)).toEqual(['A', 'p1', 'B', 'p2', 'C'])
+    // A chain naming unknown films keeps the score but drops the route.
+    expect(freeFromLink(idx, { s: 'A', e: 'C', links: 2, mids: ['p1', 'X', 'p2'] })!.friend).toEqual({ links: 2, path: null })
+    // A score under par is impossible, so it is ignored.
+    expect(freeFromLink(idx, { s: 'A', e: 'C', links: 1, mids: [] })!.friend).toBeUndefined()
+  })
+  it('rejects unknown, identical or unconnected films', () => {
+    expect(freeFromLink(idx, { s: 'A', e: 'Z', links: null, mids: [] })).toBeNull()
+    expect(freeFromLink(idx, { s: 'A', e: 'A', links: null, mids: [] })).toBeNull()
+    expect(freeFromLink(idx, { s: 'A', e: 'D', links: null, mids: [] })).toBeNull()
   })
 })
 

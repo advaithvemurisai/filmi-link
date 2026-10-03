@@ -12,9 +12,9 @@ import {
   type Result, type Track,
 } from './lib/storage'
 import { fetchRouteShare, loadAccount, saveAccount, sync, SyncError, type Account } from './lib/account'
-import { validChallenge, validResults } from './lib/results'
+import { freeFromLink, parseFreeLink, validChallenge, validResults, type Friend } from './lib/results'
 
-type Mode = { kind: 'daily'; date: string; track: Track } | { kind: 'free'; puzzle: PuzzleDef; n: number }
+type Mode = { kind: 'daily'; date: string; track: Track } | { kind: 'free'; puzzle: PuzzleDef; n: number; friend?: Friend }
 type Sheet = 'how' | 'stats' | 'archive' | 'account' | 'friends' | 'home' | null
 
 const BASE = import.meta.env.BASE_URL
@@ -27,11 +27,13 @@ const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsW
  */
 export interface Challenge { no: number; links: number; mids: string[] }
 function parseChallenge(): Challenge | null {
-  const m = /^(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,11})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
+  const m = /^(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,23})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
   return m ? { no: Number(m[1]), links: Number(m[2]), mids: m[3] ? m[3].slice(1).split('.') : [] } : null
 }
 // Read once at load, before the returning-player redirect rewrites the URL.
 const CHALLENGE = parseChallenge()
+
+const FREE_LINK = parseFreeLink(location.search)
 
 const flag = (k: string, v?: boolean) => {
   try {
@@ -45,7 +47,8 @@ const flag = (k: string, v?: boolean) => {
 /** Returning players land straight in the game; the landing page is for first visits and shared links. */
 function initialRoute(): Route {
   const r = routeFromPath()
-  if (r === 'landing' && hasPlayed()) {
+  // A shared random chain skips the landing page, which is about today's daily.
+  if (r === 'landing' && (hasPlayed() || FREE_LINK)) {
     history.replaceState(null, '', `${BASE}play${location.search}`)
     return 'play'
   }
@@ -123,6 +126,8 @@ export default function App() {
         setIdx(index)
         setFile(p)
         setResults(validResults(index, p, loadResults()))
+        const shared = FREE_LINK && freeFromLink(index, FREE_LINK)
+        if (shared) setMode({ kind: 'free', n: 1, ...shared })
       })
       .catch(() => setError('Could not load film data.'))
   }, [])
@@ -205,7 +210,7 @@ export default function App() {
     const pz = date <= today ? puzzleFor(file, date) : null
     if (!pz || !validChallenge(CHALLENGE.links, pz.par)) return null
     let path: Node[] | null = null
-    if (idx && CHALLENGE.mids.length === CHALLENGE.links - 1) {
+    if (idx && CHALLENGE.mids.length === CHALLENGE.links * 2 - 1) {
       const full: Node[] = [
         { kind: 'film', id: pz.s },
         ...CHALLENGE.mids.map((id, i): Node => ({ kind: i % 2 === 0 ? 'person' : 'film', id })),
@@ -281,6 +286,7 @@ export default function App() {
   }
 
   const friendHere = mode.kind === 'daily' && track === 'all' && !!challenge && mode.date === challenge.date
+  const friend = mode.kind === 'free' ? mode.friend ?? null : friendHere ? challenge : null
   const isDaily = (t: Track) => mode.kind === 'daily' && mode.date === today && track === t
   const openDaily = (t: Track) => setMode({ kind: 'daily', date: today, track: t })
 
@@ -359,8 +365,9 @@ export default function App() {
           shareTitle={shareTitle}
           isToday={mode.kind === 'daily' && mode.date === today}
           dailyNo={mode.kind === 'daily' && track === 'all' ? dailyNo : null}
-          challenge={friendHere ? challenge!.links : null}
-          friendPath={friendHere ? challenge!.path : null}
+          free={mode.kind === 'free'}
+          challenge={friend?.links ?? null}
+          friendPath={friend?.path ?? null}
           coach={coach && mode.kind === 'daily'}
           routeShare={mode.kind === 'daily' && mode.date === today && track === 'all' ? routeShare : null}
           initialResult={mode.kind === 'daily' ? activeResults[mode.date] ?? null : null}
