@@ -24,18 +24,23 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
 
     const spots = new Map<string, { node: Node; x: number; y: number; shared: boolean; order: number }>()
     const xOf = (i: number, len: number) => 4 + (92 * i) / Math.max(1, len - 1)
-    for (const r of routes) {
+    // A loop revisits a stop; each revisit gets its own spot, or it would be averaged on top of its neighbours.
+    const spotKeys = routes.map((r) => {
+      const seen = new Set<string>()
+      return r.path.map((n, i) => (seen.has(key(n)) ? `${key(n)}#${i}` : (seen.add(key(n)), key(n))))
+    })
+    routes.forEach((r, ri) => {
       r.path.forEach((n, i) => {
-        const k = key(n)
-        const shared = (counts.get(k) ?? 0) > 1
+        const k = spotKeys[ri][i]
+        const shared = k === key(n) && (counts.get(k) ?? 0) > 1
         const prev = spots.get(k)
         const x = xOf(i, r.path.length)
         if (prev) prev.x = (prev.x + x) / 2
         else spots.set(k, { node: n, x, y: shared ? 50 : r.y, shared, order: i })
       })
-    }
-    const edges = routes.flatMap((r) =>
-      r.path.slice(1).map((n, i) => ({ a: key(r.path[i]), b: key(n), cls: r.cls, order: i })),
+    })
+    const edges = routes.flatMap((r, ri) =>
+      r.path.slice(1).map((_, i) => ({ a: spotKeys[ri][i], b: spotKeys[ri][i + 1], cls: r.cls, order: i })),
     )
     const longest = Math.max(...routes.map((r) => r.path.length))
     return { spots: [...spots.entries()], edges, routes, longest }
