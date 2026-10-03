@@ -138,9 +138,10 @@ export default function Game(props: Props) {
   }
 
   function go(node: Node, from?: Element | null) {
-    const existing = path.findIndex((n) => n.kind === node.kind && n.id === node.id)
-    const next = existing >= 0 ? path.slice(0, existing + 1) : [...path, node]
-    launchFrom(existing >= 0 ? null : from?.querySelector('.poster, .avatar') ?? null)
+    // Every pick is a step, even back to someone already in the chain: a loop costs its links.
+    // Undoing for free is what Back and the filmstrip are for.
+    const next = [...path, node]
+    launchFrom(from?.querySelector('.poster, .avatar') ?? null)
     setPath(next)
     setHint(null)
     setQuery('')
