@@ -21,12 +21,27 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     }
   ],
   "rewrites": [
     {
       "source": "/play",
       "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/remind",
+      "schedule": "0 1 * * *"
     }
   ]
 }

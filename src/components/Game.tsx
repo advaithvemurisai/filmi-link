@@ -5,6 +5,7 @@ import { IMG, clock } from '../lib/format'
 import { MAX_SECONDS, collectCast, ratingFor, type Progress, type Result } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, ROLE_ICON, Stamp, launchFrom } from './Bits'
 import RouteMap from './RouteMap'
+import { Reminders } from './Reminders'
 
 const ROLE_ORDER: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
 const GROUPS: [Role, string][] = [['Director', 'Direction'], ['Music', 'Music'], ['Actor', 'Cast']]
@@ -678,6 +679,7 @@ function ResultPanel({
         </div>
       </div>
       {isToday && <NextPuzzle />}
+      {isToday && <Reminders compact />}
     </section>
   )
 }

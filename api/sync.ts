@@ -5,12 +5,16 @@
  * is only ever sent once per device. Storage is Upstash Redis over its REST API (free tier): one JSON
  * value per player plus a set of all player keys. Streaks are never stored; clients derive them
  * from results, exactly as they do offline.
+ *
+ * Daily-reminder subscriptions live here too. They belong to a browser, not a player, so anyone can
+ * opt in without an account; api/remind.ts sends the reminders.
  */
 
 export interface Store {
   get(key: string): Promise<string | null>
   set(key: string, value: string): Promise<void>
   sadd(key: string, member: string): Promise<void>
+  srem(key: string, member: string): Promise<void>
   smembers(key: string): Promise<string[]>
   mget(keys: string[]): Promise<(string | null)[]>
   /** INCR, starting a TTL on first increment. Returns the new count. */
@@ -32,6 +36,7 @@ export function upstash(url: string, token: string): Store {
     get: async (k) => (await cmd('GET', k)) as string | null,
     set: async (k, v) => void (await cmd('SET', k, v)),
     sadd: async (k, m) => void (await cmd('SADD', k, m)),
+    srem: async (k, m) => void (await cmd('SREM', k, m)),
     smembers: async (k) => (await cmd('SMEMBERS', k)) as string[],
     mget: async (keys) => (keys.length ? ((await cmd('MGET', ...keys)) as (string | null)[]) : []),
     bump: async (k, ttl) => {
@@ -51,6 +56,7 @@ export function memoryStore(): Store {
     get: async (k) => kv.get(k) ?? null,
     set: async (k, v) => void kv.set(k, v),
     sadd: async (k, m) => void (sets.get(k) ?? sets.set(k, new Set()).get(k)!).add(m),
+    srem: async (k, m) => void sets.get(k)?.delete(m),
     smembers: async (k) => [...(sets.get(k) ?? [])],
     mget: async (keys) => keys.map((k) => kv.get(k) ?? null),
     bump: async (k) => {
@@ -149,6 +155,45 @@ function merge(into: Record<string, Entry>, incoming: unknown) {
   }
 }
 
+/** A browser's push subscription plus what the reminder needs: its time zone and when it last played. */
+export interface PushSub {
+  sub: { endpoint: string; keys: { p256dh: string; auth: string } }
+  /** IANA zone, so "today" means the player's today. Defaults to US Central. */
+  tz: string
+  /** Local date of the last India daily finished on its own day, or '' if none yet. */
+  last: string
+  streak: number
+}
+export const PUSH_SUBS = 'cl:push'
+export const pushKey = (id: string) => `cl:push:${id}`
+const pushId = async (endpoint: string) =>
+  hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint))).slice(0, 32)
+
+const validZone = (tz: unknown): tz is string => {
+  if (typeof tz !== 'string' || tz.length > 64) return false
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz })
+    return true
+  } catch {
+    return false
+  }
+}
+const b64url = (v: unknown, max: number) => typeof v === 'string' && v.length <= max && /^[\w-]+=*$/.test(v)
+
+function cleanPush(b: Record<string, unknown>): PushSub | null {
+  const sub = b.sub as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } } | undefined
+  const endpoint = sub?.endpoint
+  if (typeof endpoint !== 'string' || endpoint.length > 1024 || !endpoint.startsWith('https://')) return null
+  if (!b64url(sub?.keys?.p256dh, 200) || !b64url(sub?.keys?.auth, 64)) return null
+  const last = typeof b.last === 'string' && DATE_RE.test(b.last) ? b.last : ''
+  return {
+    sub: { endpoint, keys: { p256dh: sub!.keys!.p256dh as string, auth: sub!.keys!.auth as string } },
+    tz: validZone(b.tz) ? b.tz : 'America/Chicago',
+    last,
+    streak: int(b.streak, 100_000) ?? 0,
+  }
+}
+
 export interface Reply { status: number; body: Record<string, unknown> }
 const fail = (status: number, error: string): Reply => ({ status, body: { error } })
 
@@ -237,6 +282,25 @@ export async function handle(store: Store, method: string, body: unknown): Promi
       ? [await store.bump(routeKey, ROUTE_TTL), await store.bump(totalKey, ROUTE_TTL)]
       : (await store.mget([routeKey, totalKey])).map((v) => Number(v) || 0)
     return { status: 200, body: { count, total } }
+  }
+
+  if (b.action === 'push') {
+    // Turn reminders on, or refresh what this browser last played. The endpoint is an unguessable URL
+    // only its own browser knows, so it doubles as the key to its record.
+    const rec = cleanPush(b)
+    if (!rec) return fail(400, 'That subscription doesn’t look right.')
+    const id = await pushId(rec.sub.endpoint)
+    await store.set(pushKey(id), JSON.stringify(rec))
+    await store.sadd(PUSH_SUBS, id)
+    return { status: 200, body: { ok: true } }
+  }
+
+  if (b.action === 'unpush') {
+    if (typeof b.endpoint !== 'string' || b.endpoint.length > 1024) return fail(400, 'No subscription given.')
+    const id = await pushId(b.endpoint)
+    await store.del(pushKey(id))
+    await store.srem(PUSH_SUBS, id)
+    return { status: 200, body: { ok: true } }
   }
 
   return fail(400, 'Unknown action.')

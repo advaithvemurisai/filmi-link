@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Avatar, Icon, Modal, ParMeter, Poster, Stamp } from './Bits'
 import Walkthrough from './Walkthrough'
+import { Reminders } from './Reminders'
 import type { Index } from '../lib/graph'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 import { HOME_LANGS, SCRIPT, langName } from '../lib/format'
@@ -120,6 +121,7 @@ export function Stats({
           </ul>
         )}
       </section>
+      <Reminders />
       <p className="fine">
         Streaks count daily puzzles solved on their own day. {synced ? 'The India daily is synced to your player.' : 'Stored in this browser only.'}
       </p>

@@ -11,6 +11,7 @@ import {
   computeStats, hasPlayed, loadProgress, loadResults, loadSettings, saveProgress, saveResults, saveSettings,
   type Result, type Track,
 } from './lib/storage'
+import { reportPlayed } from './lib/push'
 import { fetchRouteShare, loadAccount, saveAccount, sync, SyncError, type Account } from './lib/account'
 import { freeFromLink, parseFreeLink, validChallenge, validResults, type Friend } from './lib/results'
 
@@ -203,6 +204,9 @@ export default function App() {
   }
 
   const streak = computeStats(results, today).streak
+  // The newest India daily played on its own day, so a subscribed browser isn't reminded after playing.
+  const lastPlayed = Object.keys(results).reduce((m, d) => (results[d].live && d > m ? d : m), '')
+  useEffect(() => reportPlayed({ last: lastPlayed, streak }), [lastPlayed, streak])
   // A challenge points at one India daily, today's or an earlier one; the friend's chain is rebuilt from the graph.
   const challenge = (() => {
     if (!CHALLENGE || !file) return null

@@ -475,6 +475,9 @@ div.face .avatar { opacity: .85; }
 .save-cta > div { flex: 1; display: grid; gap: 2px; }
 .save-cta span { font-size: 13px; color: var(--muted); }
 .save-flame { color: var(--t-flop); }
+.remind-card { margin-top: 16px; }
+.remind-bell { color: var(--accent-text); }
+.remind-row { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 
 /* Result ticket: main part plus a perforated stub */
 .ticket { display: grid; grid-template-columns: 1fr auto; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); }

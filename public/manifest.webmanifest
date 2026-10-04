@@ -1,0 +1,14 @@
+{
+  "name": "CinematicLink",
+  "short_name": "CinematicLink",
+  "description": "A daily Indian cinema puzzle: connect two films through the people who made them.",
+  "start_url": "/play",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f0f12",
+  "theme_color": "#0f0f12",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
