@@ -80,16 +80,24 @@ export function isValidChain(idx: Index, path: Node[] | undefined, s: string, e?
 /** Links = number of people in a chain. */
 export const linkCount = (path: Node[]) => path.filter((n) => n.kind === 'person').length
 
-/** Random solvable puzzle for free play, with par as close to `want` as the graph allows. */
-export function randomPuzzle(idx: Index, want: number, rng = Math.random) {
+/**
+ * Random solvable puzzle for free play, with par as close to `want` as the graph allows.
+ * Films in `avoid` (recent random chains) are skipped while fresh ones are left, so back-to-back
+ * chains don't keep landing on the same few films.
+ */
+export function randomPuzzle(idx: Index, want: number, rng = Math.random, avoid: ReadonlySet<string> = new Set()) {
   const films = Object.keys(idx.data.films).sort((a, b) => idx.data.films[b].pop - idx.data.films[a].pop)
   // Endpoints come from well-known films only (matches POOL_SIZE in generate_puzzles.py).
   const pool = films.slice(0, Math.min(800, Math.max(60, Math.floor(films.length * 0.4))))
+  const fresh = pool.filter((f) => !avoid.has(f))
+  const starts = fresh.length >= 20 ? fresh : pool
   let best: { s: string; e: string; par: number } | null = null
   for (let attempt = 0; attempt < 40; attempt++) {
-    const s = pool[Math.floor(rng() * pool.length)]
+    const s = starts[Math.floor(rng() * starts.length)]
     const dist = filmDistances(idx, s)
-    const cands = pool.filter((f) => f !== s && (dist.get(f) ?? 0) >= 2)
+    const reachable = (f: string) => f !== s && (dist.get(f) ?? 0) >= 2
+    const freshCands = fresh.filter(reachable)
+    const cands = freshCands.length ? freshCands : pool.filter(reachable)
     if (!cands.length) continue
     const gap = Math.min(...cands.map((f) => Math.abs(dist.get(f)! - want)))
     const pick = cands.filter((f) => Math.abs(dist.get(f)! - want) === gap)

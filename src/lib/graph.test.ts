@@ -111,6 +111,16 @@ describe('shipped data', () => {
       expect(linkCount(shortestPath(idx, { kind: 'film', id: pz.s }, pz.e)!)).toBe(want)
     }
   })
+  it('random puzzles skip recently used films', () => {
+    let seed = 7
+    const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    const recent = new Set<string>()
+    for (let i = 0; i < 15; i++) {
+      const pz = randomPuzzle(idx, 3, rng, recent)!
+      expect(recent.has(pz.s) || recent.has(pz.e)).toBe(false)
+      recent.add(pz.s).add(pz.e)
+    }
+  })
 })
 
 describe('daily schedule', () => {

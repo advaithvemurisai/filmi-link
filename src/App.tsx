@@ -8,7 +8,8 @@ import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type
 import { addDays, localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import { langName } from './lib/format'
 import {
-  computeStats, hasPlayed, loadProgress, loadResults, loadSettings, saveProgress, saveResults, saveSettings,
+  computeStats, hasPlayed, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
+  saveSettings,
   type Result, type Track,
 } from './lib/storage'
 import { reportPlayed } from './lib/push'
@@ -191,8 +192,11 @@ export default function App() {
   const playRandom = useCallback(
     (par: number) => {
       if (!idx) return
-      const p = randomPuzzle(idx, par)
-      if (p) setMode((m) => ({ kind: 'free', puzzle: p, n: m.kind === 'free' ? m.n + 1 : 1 }))
+      const p = randomPuzzle(idx, par, Math.random, new Set(loadRecentFilms()))
+      if (p) {
+        rememberFilms(p.s, p.e)
+        setMode((m) => ({ kind: 'free', puzzle: p, n: m.kind === 'free' ? m.n + 1 : 1 }))
+      }
       setSheet(null)
     },
     [idx],

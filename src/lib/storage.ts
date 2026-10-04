@@ -51,6 +51,14 @@ export const loadProgress = (dateKey: string, track: Track = 'all') => {
 }
 export const saveProgress = (dateKey: string, p: Progress, track: Track = 'all') => write(progressKey(track, dateKey), p)
 
+/** Films from the last few random chains, newest first, so free play doesn't repeat them soon. */
+const RECENT_FILMS = 120
+export const loadRecentFilms = () => read<string[]>('fl:recent', [])
+export function rememberFilms(...ids: string[]) {
+  const next = [...ids, ...loadRecentFilms().filter((f) => !ids.includes(f))].slice(0, RECENT_FILMS)
+  write('fl:recent', next)
+}
+
 export const loadSettings = () => read<Settings>('fl:settings', { hard: false })
 export const saveSettings = (s: Settings) => write('fl:settings', s)
 
