@@ -111,7 +111,7 @@ describe('shipped data', { timeout: 30_000 }, () => {
       // The well-known pool is dense, so par 4 may not exist; the closest par is fine then.
       if (want < 4) expect(pz.par).toBe(want)
       else expect(pz.par).toBeGreaterThanOrEqual(3)
-      expect(linkCount(shortestPath(idx, { kind: 'film', id: pz.s }, pz.e)!)).toBe(want)
+      expect(linkCount(shortestPath(idx, { kind: 'film', id: pz.s }, pz.e)!)).toBe(pz.par)
     }
   })
   it('random puzzles skip recently used films', () => {
