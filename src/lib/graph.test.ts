@@ -108,10 +108,23 @@ describe('shipped data', { timeout: 30_000 }, () => {
     const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
     for (const want of [2, 3, 4]) {
       const pz = randomPuzzle(idx, want, rng)!
-      // The well-known pool is dense, so par 4 may not exist; the closest par is fine then.
-      if (want < 4) expect(pz.par).toBe(want)
-      else expect(pz.par).toBeGreaterThanOrEqual(3)
+      expect(pz.par).toBe(want)
       expect(linkCount(shortestPath(idx, { kind: 'film', id: pz.s }, pz.e)!)).toBe(pz.par)
+    }
+  })
+  it('par 4 is reachable: well-known start, end widened only as far as the top 2500', () => {
+    const rank = new Map(
+      Object.keys(graph.films)
+        .sort((a, b) => graph.films[b].pop - graph.films[a].pop)
+        .map((id, i) => [id, i]),
+    )
+    for (let seed = 1; seed <= 10; seed++) {
+      let x = seed
+      const rng = () => ((x = (x * 16807) % 2147483647) / 2147483647)
+      const pz = randomPuzzle(idx, 4, rng)!
+      expect(pz.par).toBe(4)
+      expect(rank.get(pz.s)!).toBeLessThan(800)
+      expect(rank.get(pz.e)!).toBeLessThan(2500)
     }
   })
   it('random puzzles skip recently used films', () => {

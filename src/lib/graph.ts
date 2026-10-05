@@ -89,6 +89,9 @@ export function randomPuzzle(idx: Index, want: number, rng = Math.random, avoid:
   const films = Object.keys(idx.data.films).sort((a, b) => idx.data.films[b].pop - idx.data.films[a].pop)
   // Endpoints come from well-known films only (matches POOL_SIZE in generate_puzzles.py).
   const pool = films.slice(0, Math.min(800, Math.max(60, Math.floor(films.length * 0.4))))
+  // Well-known films sit so close together that par 4 rarely exists inside the pool, so the end film
+  // may come from this wider (still recognisable) set when the pool has no exact match.
+  const wide = films.slice(0, Math.max(pool.length, 2500)).filter((f) => !avoid.has(f))
   const fresh = pool.filter((f) => !avoid.has(f))
   const starts = fresh.length >= 20 ? fresh : pool
   let best: { s: string; e: string; par: number } | null = null
@@ -99,8 +102,12 @@ export function randomPuzzle(idx: Index, want: number, rng = Math.random, avoid:
     const freshCands = fresh.filter(reachable)
     const cands = freshCands.length ? freshCands : pool.filter(reachable)
     if (!cands.length) continue
-    const gap = Math.min(...cands.map((f) => Math.abs(dist.get(f)! - want)))
-    const pick = cands.filter((f) => Math.abs(dist.get(f)! - want) === gap)
+    let gap = Math.min(...cands.map((f) => Math.abs(dist.get(f)! - want)))
+    let pick = cands.filter((f) => Math.abs(dist.get(f)! - want) === gap)
+    if (gap > 0) {
+      const exact = wide.filter((f) => f !== s && dist.get(f) === want)
+      if (exact.length) [gap, pick] = [0, exact]
+    }
     const e = pick[Math.floor(rng() * pick.length)]
     if (!best || gap < Math.abs(best.par - want)) best = { s, e, par: dist.get(e)! }
     if (gap === 0) break
