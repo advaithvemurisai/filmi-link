@@ -141,8 +141,7 @@ export default function Game(props: Props) {
   }
 
   function go(node: Node, from?: Element | null) {
-    // Every pick is a step, even back to someone already in the chain: a loop costs its links.
-    // Undoing for free is what Back and the filmstrip are for.
+    // Every pick is permanent, even back to someone already in the chain: a loop costs its links.
     const next = [...path, node]
     launchFrom(from?.querySelector('.poster, .avatar') ?? null)
     setPath(next)
@@ -184,9 +183,6 @@ export default function Game(props: Props) {
             <ParMeter links={links} par={puzzle.par} />
             <span className="timer" aria-label="Time"><Icon name="timer" size={14} /> {clock(seconds)}</span>
             <div className="tools">
-              <button className="tool" onClick={() => setPath(path.slice(0, -1))} disabled={path.length < 2} title="Back one step">
-                <Icon name="back" size={16} /><span className="tool-label">Back</span>
-              </button>
               {!hard && (
                 <button className={`tool tool-hint ${hintArmed ? 'is-armed' : ''}`} onClick={takeHint}
                   title="Reveal the next step on a shortest route">
@@ -212,7 +208,6 @@ export default function Game(props: Props) {
 
           <Filmstrip
             idx={idx} path={path} activeIndex={path.length - 1}
-            onJump={(i) => setPath(path.slice(0, i + 1))}
             goal={{ par: puzzle.par, target: puzzle.e }}
           />
 

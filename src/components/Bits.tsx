@@ -136,11 +136,10 @@ function ghostKinds(current: Node, links: number, par: number): Node['kind'][] {
  * ending on the target, so progress reads at a glance.
  */
 export function Filmstrip({
-  idx, path, onJump, activeIndex, goal, replay, label = 'Your chain', shared,
+  idx, path, activeIndex, goal, replay, label = 'Your chain', shared,
 }: {
   idx: Index
   path: Node[]
-  onJump?: (i: number) => void
   activeIndex?: number
   goal?: { par: number; target: string }
   replay?: boolean
@@ -176,12 +175,12 @@ export function Filmstrip({
           className={`frame frame-${n.kind} ${i === activeIndex ? 'is-active' : ''} ${shared?.has(`${n.kind}:${n.id}`) ? 'is-shared' : ''}`}
           style={replay ? ({ '--d': `${i * 160}ms` } as CSSProperties) : undefined}
         >
-          <button type="button" className="frame-body" disabled={!onJump || i === activeIndex} onClick={() => onJump?.(i)} title={nodeLabel(idx, n)}>
+          <div className="frame-body" title={nodeLabel(idx, n)}>
             <span className="frame-art">
               {n.kind === 'film' ? <Poster idx={idx} id={n.id} size="sm" /> : <Avatar idx={idx} id={n.id} size="sm" />}
             </span>
             <span className="frame-label">{nodeLabel(idx, n)}</span>
-          </button>
+          </div>
         </li>
       ))}
       {ghosts.map((k, j) => (

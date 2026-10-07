@@ -18,7 +18,7 @@ export function HowTo({ idx, onClose }: { idx: Index; onClose: () => void }) {
           <li><span className="legend-ring" aria-hidden><Icon name="target" size={13} /></span> Ringed cards lead straight to the target</li>
           <li><span className="reach" aria-hidden><i className="on" /><i className="on" /><i className="on" /><i /><i /></span> How many other films they have</li>
           <li><span aria-hidden><Icon name="director" size={16} /> <Icon name="music" size={16} /></span> Director / music composer</li>
-          <li><span aria-hidden><Icon name="back" size={16} /></span> Going back is free. Tap any frame to rewind</li>
+          <li><span aria-hidden><Icon name="arrow" size={16} /></span> Every choice is permanent, so choose your next link carefully</li>
           <li><span aria-hidden><Icon name="hint" size={16} /></span> Hints show the next step, but cap the day at a Hit</li>
           <li>
             <span className="legend-tiers" aria-hidden><i className="t-blockbuster" /><i className="t-hit" /><i className="t-flop" /><i className="t-disaster" /></span>
