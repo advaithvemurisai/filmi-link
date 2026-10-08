@@ -259,7 +259,6 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .tool:hover:not(:disabled) { border-color: var(--muted); }
 .tool:disabled { opacity: .4; cursor: default; }
 .tool-hint:hover:not(:disabled) { border-color: var(--hint); }
-.tool-hint.is-armed { border-color: var(--hint); background: color-mix(in srgb, var(--hint) 14%, transparent); }
 .tool-quiet { background: transparent; border-color: transparent; color: var(--muted); }
 .tool-quiet:hover { color: var(--text); }
 .tool-quiet.is-armed { color: var(--danger); border-color: var(--danger); background: var(--accent-soft); }

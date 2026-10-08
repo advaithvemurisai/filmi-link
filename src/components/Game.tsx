@@ -69,7 +69,6 @@ export default function Game(props: Props) {
   const [now, setNow] = useState(Date.now())
   const [query, setQuery] = useState('')
   const [quitArmed, setQuitArmed] = useArmed()
-  const [hintArmed, setHintArmed] = useArmed()
   const listRef = useRef<HTMLDivElement>(null)
 
   const current = path[path.length - 1]
@@ -152,13 +151,11 @@ export default function Game(props: Props) {
   }
 
   function takeHint() {
-    // The first hint of a puzzle costs the Blockbuster, so it asks once.
-    if (hints === 0 && !hintArmed) return setHintArmed(true)
-    setHintArmed(false)
     const sp = shortestPath(idx, current, puzzle.e)
     if (sp && sp[1]) {
       setHint(sp[1])
       setHints((h) => h + 1)
+      setQuery('')
     }
   }
 
@@ -184,10 +181,10 @@ export default function Game(props: Props) {
             <span className="timer" aria-label="Time"><Icon name="timer" size={14} /> {clock(seconds)}</span>
             <div className="tools">
               {!hard && (
-                <button className={`tool tool-hint ${hintArmed ? 'is-armed' : ''}`} onClick={takeHint}
-                  title="Reveal the next step on a shortest route">
+                <button className="tool tool-hint" onClick={takeHint}
+                  title="Reveal the next step; using a hint caps your rating at Hit">
                   <Icon name="hint" size={16} />
-                  <span className="tool-label">{hintArmed ? 'Caps today at Hit. Tap again' : 'Hint'}</span>
+                  <span className="tool-label">Hint</span>
                   {hints > 0 && <b className="tool-count">{hints}</b>}
                 </button>
               )}
