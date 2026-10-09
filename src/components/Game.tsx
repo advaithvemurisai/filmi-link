@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
 import { localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
-import { MAX_SECONDS, collectCast, ratingFor, type Progress, type Result } from '../lib/storage'
+import { MAX_SECONDS, collectCast, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, ROLE_ICON, Stamp, launchFrom } from './Bits'
 import RouteMap from './RouteMap'
 import { Reminders } from './Reminders'
@@ -544,6 +544,21 @@ function shareQuery(puzzle: PuzzleDef, result: Omit<Result, 'live'>, dailyNo: nu
   return dailyNo && score ? `?c=${dailyNo}${score}` : ''
 }
 
+/** The 0-1000 score with where each point came from, so the number is never a mystery. */
+function ScoreCard({ parts }: { parts: ScoreParts }) {
+  const rows: [string, number][] = [['Links', parts.links], ['Hints', parts.hints], ['Speed', parts.speed]]
+  return (
+    <div className="score-card" aria-label={`Score ${parts.total} out of 1000`}>
+      <div className="score-total"><b>{parts.total}</b><span>/ 1000</span></div>
+      <dl className="score-parts">
+        {rows.map(([k, v]) => (
+          <div key={k} className={v < 0 ? 'is-neg' : v === 0 ? 'is-zero' : ''}><dt>{k}</dt><dd>{v > 0 && k !== 'Links' ? '+' : ''}{v}</dd></div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
 function ResultPanel({
   idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, free, friendPath,
   onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
@@ -552,6 +567,7 @@ function ResultPanel({
   const { films, people } = idx.data
   const rating = result.gaveUp ? 'Shelved' : ratingFor(result.links, puzzle.par, result.hints)
   const diff = result.links - puzzle.par
+  const pts = scoreFor({ ...result, par: puzzle.par })
   const blockbuster = rating === 'Blockbuster'
 
   const verdict = result.gaveUp
@@ -583,7 +599,7 @@ function ResultPanel({
     `${films[puzzle.s].t} → ${films[puzzle.e].t}`,
     result.gaveUp
       ? `${blocks} Shelved (shortest ${puzzle.par})`
-      : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''}`,
+      : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''} · ${pts.total} pts`,
     window.location.origin + import.meta.env.BASE_URL + shareQuery(puzzle, result, dailyNo, free),
   ].join('\n')
 
@@ -604,6 +620,7 @@ function ResultPanel({
         <Stamp rating={rating} />
         <h2>{verdict}</h2>
         {!result.gaveUp && <ParMeter links={result.links} par={puzzle.par} big />}
+        {!result.gaveUp && <ScoreCard parts={pts} />}
         <div className="result-chips">
           <span title="Time"><Icon name="timer" size={14} /> {clock(result.seconds)}</span>
           <span title="Hints used"><Icon name="hint" size={14} /> {result.hints}</span>
@@ -663,7 +680,7 @@ function ResultPanel({
               : Array.from({ length: result.links }, (_, i) => <i key={i} className={i < puzzle.par ? '' : 'is-over'} />)}
           </p>
           <p className="ticket-meta">
-            {result.gaveUp ? `Shortest was ${puzzle.par}` : `${result.links} link${result.links > 1 ? 's' : ''} · shortest ${puzzle.par}`} · {clock(result.seconds)}
+            {result.gaveUp ? `Shortest was ${puzzle.par}` : `${result.links} link${result.links > 1 ? 's' : ''} · shortest ${puzzle.par} · ${pts.total} pts`} · {clock(result.seconds)}
           </p>
         </div>
         <div className="ticket-stub">

@@ -416,6 +416,15 @@ div.face .avatar { opacity: .85; }
 .result-chips span { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .result-chips .chip-new { font-family: var(--sans); color: var(--text); border-color: var(--t-hit); }
 .result-chips .chip-cult { font-family: var(--sans); color: var(--text); border-color: var(--t-blockbuster); }
+.score-card { display: grid; justify-items: center; gap: 8px; }
+.score-total { display: flex; align-items: baseline; gap: 6px; }
+.score-total b { font-family: var(--display); font-size: 44px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.score-total span { font-family: var(--mono); font-size: 13px; color: var(--faint); }
+.score-parts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 0; }
+.score-parts div { display: flex; gap: 6px; font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.score-parts dt { margin: 0; } .score-parts dd { margin: 0; color: var(--text); }
+.score-parts .is-neg dd { color: var(--t-flop); }
+.score-parts .is-zero { opacity: .55; }
 .route-line { font-size: 14px; color: var(--muted); }
 
 /* The verdict stamp: tier colour, double rule, pressed on at an angle. */
@@ -548,7 +557,7 @@ div.face .avatar { opacity: .85; }
 .streak-flame { color: var(--t-flop); }
 .streak-hero b { font-family: var(--display); font-size: 48px; line-height: 1; display: block; font-weight: 600; }
 .streak-hero span { color: var(--muted); font-size: 14px; }
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; text-align: center; }
 .stats-grid div { display: grid; background: var(--bg-2); border-radius: 10px; padding: 12px 4px; }
 .stats-grid b { font-family: var(--display); font-size: 26px; font-weight: 600; }
 .stats-grid span { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; }
@@ -623,7 +632,11 @@ div.face .avatar { opacity: .85; }
 .friend-main em { font-style: normal; color: var(--faint); font-weight: 500; }
 .friend-week { display: grid; grid-template-columns: repeat(7, 12px); gap: 3px; }
 .friend-week i { border-radius: 3px; }
-.friend-today { display: grid; justify-items: end; gap: 4px; flex: none; }
+.friend-today { display: grid; justify-items: end; gap: 3px; flex: none; }
+.friend-pts { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.friend-pts b { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.friends li.is-me { background: color-mix(in srgb, var(--t-hit) 7%, var(--bg-2)); }
+.friend-rank { font-size: 18px; }
 .friend-today small { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .friend-today .muted { color: var(--faint); font-size: 12px; }
 .friend-streak { display: inline-flex; align-items: center; gap: 3px; font-family: var(--mono); font-size: 15px; flex: none; min-width: 44px; justify-content: flex-end; color: var(--text); }

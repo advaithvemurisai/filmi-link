@@ -3,7 +3,7 @@ import { Icon, Modal, PlayerBadge, Stamp } from './Bits'
 import { fetchFriends, login, SyncError, type Account, type Friend } from '../lib/account'
 import { addDays } from '../lib/daily'
 import { clock } from '../lib/format'
-import { computeStats, rate, tierClass, type Result } from '../lib/storage'
+import { computeStats, rate, scoreFor, tierClass, type Result } from '../lib/storage'
 
 /** Name + 4-digit PIN. A new name creates a player; an existing name needs its PIN. */
 export function AccountSheet({
@@ -87,7 +87,7 @@ export function AccountSheet({
   )
 }
 
-/** Friends' streaks and today's result, ranked. Chains stay hidden so nothing is spoiled. */
+/** Friends ranked by today's score, with streaks alongside. Chains stay hidden so nothing is spoiled. */
 export function FriendsSheet({
   account, today, onClose, onSignIn,
 }: {
@@ -119,13 +119,18 @@ export function FriendsSheet({
   }
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6))
+  // Today's score decides the order (played today first); streak, then speed, break ties.
   const rows = (players ?? [])
-    .map((p) => ({ ...p, stats: computeStats(p.results, today), todays: p.results[today] }))
+    .map((p) => {
+      const todays = p.results[today]
+      return { ...p, stats: computeStats(p.results, today), todays, pts: todays && !todays.gaveUp ? scoreFor(todays).total : null }
+    })
     .sort((a, b) =>
+      Number(b.todays !== undefined) - Number(a.todays !== undefined) ||
+      (b.pts ?? -1) - (a.pts ?? -1) ||
       b.stats.streak - a.stats.streak ||
-      Number(!!b.todays && !b.todays.gaveUp) - Number(!!a.todays && !a.todays.gaveUp) ||
-      (a.todays?.links ?? 99) - (b.todays?.links ?? 99) ||
       (a.todays?.seconds ?? 1e9) - (b.todays?.seconds ?? 1e9))
+  const medals = ['🥇', '🥈', '🥉']
 
   return (
     <Modal title="Friends" onClose={onClose}>
@@ -138,7 +143,9 @@ export function FriendsSheet({
             const me = p.name.toLowerCase() === account.name.toLowerCase()
             return (
               <li key={p.name} className={me ? 'is-me' : ''} style={{ animationDelay: `${rank * 60}ms` }}>
-                <span className={`friend-rank ${rank < 3 && p.stats.streak > 0 ? 'is-top' : ''}`}>{rank + 1}</span>
+                <span className={`friend-rank ${rank < 3 && p.pts !== null ? 'is-top' : ''}`}>
+                  {rank < 3 && p.pts !== null ? <span aria-label={`Rank ${rank + 1}`}>{medals[rank]}</span> : rank + 1}
+                </span>
                 <PlayerBadge name={p.name} />
                 <span className="friend-main">
                   <b>{p.name}{me && <em> · you</em>}</b>
@@ -148,7 +155,11 @@ export function FriendsSheet({
                 </span>
                 <span className="friend-today" title="Today">
                   {!t ? <span className="muted">not yet</span>
-                    : <><Stamp rating={rate(t) ?? 'Shelved'} small /><small>{t.links} links · {clock(t.seconds)}</small></>}
+                    : <>
+                      <span className="friend-pts"><b>{p.pts ?? 0}</b> pts</span>
+                      <Stamp rating={rate(t) ?? 'Shelved'} small />
+                      <small>{t.links} link{t.links === 1 ? '' : 's'} · {clock(t.seconds)}{t.hints ? ` · 💡${t.hints}` : ''}</small>
+                    </>}
                 </span>
                 <span className={`friend-streak ${p.stats.streak ? '' : 'is-cold'}`} title="Current streak"><Icon name="flame" size={15} />{p.stats.streak}</span>
               </li>

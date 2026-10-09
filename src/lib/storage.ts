@@ -66,7 +66,7 @@ export const saveSettings = (s: Settings) => write('fl:settings', s)
 export const hasPlayed = () => Object.keys(loadResults()).length > 0
 
 /** The parts of a result stats need (friends' results arrive without their chains). */
-export type Score = Pick<Result, 'links' | 'par' | 'gaveUp' | 'live'> & { hints?: number }
+export type Score = Pick<Result, 'links' | 'par' | 'gaveUp' | 'live'> & { hints?: number; seconds?: number }
 
 /** Box-office rating for a solved puzzle, by how many links over the shortest chain. */
 export const RATINGS = ['Blockbuster', 'Hit', 'Flop', 'Disaster'] as const
@@ -76,6 +76,26 @@ export function ratingFor(links: number, par: number, hints = 0): Rating {
   const r = RATINGS[Math.min(3, Math.max(0, links - par))]
   return r === 'Blockbuster' && hints > 0 ? 'Hit' : r
 }
+
+/** Points for the links used: full marks for the shortest chain, then steeply less for each extra link. */
+const LINK_POINTS = [800, 550, 300, 100]
+export const HINT_COST = 100
+/** Up to this many bonus points for a quick solve: full under FAST_SECONDS, none past SLOW_SECONDS. */
+export const SPEED_MAX = 200
+const FAST_SECONDS = 30
+const SLOW_SECONDS = 300
+
+export interface ScoreParts { links: number; hints: number; speed: number; total: number }
+/** 0-1000 score: efficiency dominates, each hint costs points, a fast solve earns a bonus. A give-up scores 0. */
+export function scoreFor(r: Pick<Result, 'links' | 'par' | 'gaveUp'> & { seconds?: number; hints?: number }): ScoreParts {
+  if (r.gaveUp) return { links: 0, hints: 0, speed: 0, total: 0 }
+  const links = LINK_POINTS[Math.min(LINK_POINTS.length - 1, Math.max(0, r.links - r.par))]
+  const hints = -Math.min(links, (r.hints ?? 0) * HINT_COST)
+  const t = r.seconds ?? SLOW_SECONDS
+  const speed = Math.round(SPEED_MAX * Math.min(1, Math.max(0, (SLOW_SECONDS - t) / (SLOW_SECONDS - FAST_SECONDS))))
+  return { links, hints, speed, total: links + hints + speed }
+}
+
 export const rate = (r: Score): Rating | null => (r.gaveUp ? null : ratingFor(r.links, r.par, r.hints))
 /** Class for a day cell in calendars and boards: its rating's colour, or a give-up. */
 export const tierClass = (r: Score | undefined) => (!r ? '' : r.gaveUp ? 'is-lost' : `t-${rate(r)!.toLowerCase()}`)
@@ -106,7 +126,10 @@ export function computeStats(results: Record<string, Score>, today: string) {
     const k = rate(r)!
     tiers[k] = (tiers[k] ?? 0) + 1
   }
-  return { played: entries.length, solved: solved.length, streak, best, blockbusters: tiers.Blockbuster ?? 0, tiers }
+  const scores = solved.map((r) => scoreFor(r).total)
+  const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0
+  const bestScore = Math.max(0, ...scores)
+  return { played: entries.length, solved: solved.length, streak, best, avgScore, bestScore, blockbusters: tiers.Blockbuster ?? 0, tiers }
 }
 
 /** Everyone a player has linked through: person id → first date and how many chains. */

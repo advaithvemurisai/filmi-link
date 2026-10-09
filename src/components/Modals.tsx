@@ -81,6 +81,8 @@ export function Stats({
         <div><b>{s.played}</b><span>Played</span></div>
         <div><b>{s.played ? Math.round((s.solved / s.played) * 100) : 0}%</b><span>Solved</span></div>
         <div><b>{s.blockbusters}</b><span>Blockbusters</span></div>
+        <div><b>{s.avgScore}</b><span>Avg score</span></div>
+        <div><b>{s.bestScore}</b><span>Best score</span></div>
       </div>
       <div className="heat" aria-label="Last five weeks">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i} className="heat-dow">{d}</span>)}
