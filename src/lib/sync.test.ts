@@ -111,4 +111,12 @@ describe('sync api', () => {
     const neg = await handle(store, 'POST', { action: 'sync', name: 'Slow', token: r.body.token, results: { '2026-09-28': entry(2, { seconds: -5 }) } })
     expect(Object.keys(neg.body.results as object)).toEqual(['2026-09-29'])
   })
+
+  it('expires in-memory bump counters when their TTL elapses', async () => {
+    const store = memoryStore()
+    await store.bump('ttl-test', 1)
+    expect(await store.get('ttl-test')).toBe('1')
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+    expect(await store.get('ttl-test')).toBeNull()
+  })
 })

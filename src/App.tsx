@@ -152,11 +152,12 @@ export default function App() {
   const pushResults = useCallback(
     (local: Record<string, Result>) => {
       if (!account || !idx || !file) return
-      sync(account, local)
+      const cleanLocal = validResults(idx, file, local)
+      sync(account, cleanLocal)
         .then((r) => {
-          const merged = validResults(idx, file, { ...local, ...r.results })
+          const merged = validResults(idx, file, { ...cleanLocal, ...r.results })
           saveResults(merged)
-          setResults(merged)
+          setResults((prev) => validResults(idx, file, { ...prev, ...merged }))
           setSyncedAt(Date.now())
         })
         .catch((e) => {

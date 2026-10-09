@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Avatar, Icon, LangTag, Poster, ROLE_ICON } from './Bits'
+import { Avatar, Icon, LangTag, Poster } from './Bits'
+import { ROLE_ICON } from './bit-helpers'
 import Credits from './Credits'
 import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
@@ -99,14 +100,14 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
 
         {ready && faces.length > 0 && (
           <div className="bill-start">
-            <p><span className="step-no">1</span> Your first move: pick anyone from <b>{idx.data.films[puzzle.s].t}</b></p>
+            <p><span className="step-no">1</span> Pick a connector from <b>{idx.data.films[puzzle.s].t}</b> — directors, composers and actors all count.</p>
             <ul className="bill-faces">
               {faces.map((c, i) => (
                 <li key={c.id} style={{ animationDelay: `${300 + i * 50}ms` }}>
-                  <button onClick={() => onStartFrom(c.id)} title={`Start with ${idx.data.people[c.id].n}`}>
+                  <button onClick={() => onStartFrom(c.id)} title={`Start with ${idx.data.people[c.id].n} · ${c.role}`}>
                     <span className="bill-face-art">
                       <Avatar idx={idx} id={c.id} size="lg" />
-                      {c.role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[c.role]} size={12} /></span>}
+                      <span className="card-role" aria-hidden><Icon name={ROLE_ICON[c.role]} size={12} /></span>
                     </span>
                     <span>{idx.data.people[c.id].n}</span>
                   </button>

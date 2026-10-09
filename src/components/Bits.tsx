@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import { nodeLabel, type Index, type Node, type Role } from '../lib/graph'
+import { nodeLabel, type Index, type Node } from '../lib/graph'
 import { IMG, SCRIPT, initials, langName } from '../lib/format'
 import type { Rating } from '../lib/storage'
+import { consumeFlyFrom } from './bit-helpers'
 
 /* Line icons (Lucide, ISC licence), drawn inline so they theme with currentColor. */
 const ICONS = {
@@ -56,8 +57,6 @@ export function Icon({ name, size = 18, className = '', label }: { name: IconNam
   )
 }
 
-export const ROLE_ICON: Record<Role, IconName> = { Director: 'director', Music: 'music', Actor: 'actor' }
-
 export function Poster({ idx, id, size = 'md' }: { idx: Index; id: string; size?: 'sm' | 'md' | 'lg' | 'xl' }) {
   const f = idx.data.films[id]
   const src = IMG(f.p, size === 'lg' || size === 'xl' ? 'w342' : 'w185')
@@ -88,16 +87,9 @@ export const LangTag = ({ l }: { l: string }) => (
 
 const reduceMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-/** Where the last-tapped card's picture was, so the filmstrip can fly the new frame in from it. */
-let flyFrom: { rect: DOMRect; el: HTMLElement } | null = null
-export function launchFrom(el: Element | null) {
-  flyFrom = el instanceof HTMLElement ? { rect: el.getBoundingClientRect(), el } : null
-}
-
 /** Animate a copy of the tapped picture from its card into its new frame. */
 function fly(target: HTMLElement) {
-  const from = flyFrom
-  flyFrom = null
+  const from = consumeFlyFrom()
   if (!from || reduceMotion()) return
   const to = target.getBoundingClientRect()
   const ghost = from.el.cloneNode(true) as HTMLElement
@@ -159,7 +151,7 @@ export function Filmstrip({
     if (li && !replay) list.scrollLeft = li.offsetLeft - list.clientWidth / 2 + li.offsetWidth / 2
     const art = li?.querySelector<HTMLElement>('.frame-art')
     if (grew && art) fly(art)
-    else flyFrom = null
+    else consumeFlyFrom()
   }, [path.length, replay])
 
   const last = path[path.length - 1]

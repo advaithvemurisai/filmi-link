@@ -3,7 +3,8 @@ import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node
 import { localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
 import { MAX_SECONDS, collectCast, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
-import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, ROLE_ICON, Stamp, launchFrom } from './Bits'
+import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bits'
+import { ROLE_ICON, launchFrom } from './bit-helpers'
 import RouteMap from './RouteMap'
 import { Reminders } from './Reminders'
 
@@ -151,6 +152,8 @@ export default function Game(props: Props) {
   }
 
   function takeHint() {
+    // The hint for this step is already on screen; a second tap must not charge for it again.
+    if (hint) return
     const sp = shortestPath(idx, current, puzzle.e)
     if (sp && sp[1]) {
       setHint(sp[1])
@@ -181,7 +184,7 @@ export default function Game(props: Props) {
             <span className="timer" aria-label="Time"><Icon name="timer" size={14} /> {clock(seconds)}</span>
             <div className="tools">
               {!hard && (
-                <button className="tool tool-hint" onClick={takeHint}
+                <button className="tool tool-hint" onClick={takeHint} disabled={!!hint}
                   title="Reveal the next step; using a hint caps your rating at Hit">
                   <Icon name="hint" size={16} />
                   <span className="tool-label">Hint</span>
@@ -233,6 +236,8 @@ export default function Game(props: Props) {
                     placeholder={current.kind === 'film' ? 'Find cast & crew' : 'Find a film'}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && q && visible.length === 1) go(visible[0].node) }}
+                    enterKeyHint="go"
                   />
                 </label>
               )}
@@ -277,7 +282,7 @@ export default function Game(props: Props) {
                   <p className="empty"><Icon name="search" size={22} /> Nothing matches “{query}”. Try part of a name.</p>
                 )}
                 {deadEnd && (
-                  <p className="empty"><Icon name="ban" size={22} /> Dead end: everyone here is already in your chain. Tap a frame above to branch off.</p>
+                  <p className="empty"><Icon name="ban" size={22} /> Only people and films already in your chain are left here. Picking one again costs a link.</p>
                 )}
               </div>
             </section>
@@ -336,7 +341,7 @@ function PersonCard({
     >
       <span className="card-art">
         <Avatar idx={idx} id={id} size="lg" />
-        {role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>}
+        <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>
         <CardFlag win={win} used={used} hint={hint} />
       </span>
       <span className="card-name">{name}</span>
@@ -363,7 +368,7 @@ function FilmCard({
       <span className="card-art">
         <Poster idx={idx} id={id} size="md" />
         {f.y && <span className="card-year">{f.y}</span>}
-        {role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>}
+        <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>
         <CardFlag win={target} used={used && !target} hint={hint} />
       </span>
       <span className="card-name">{f.t}</span>
@@ -425,7 +430,7 @@ function TargetPanel({
             <>
               <span className="face-art">
                 <Avatar idx={idx} id={c.id} size="md" />
-                {c.role !== 'Actor' && <span className="card-role" aria-hidden><Icon name={ROLE_ICON[c.role]} size={10} /></span>}
+                <span className="card-role" aria-hidden><Icon name={ROLE_ICON[c.role]} size={10} /></span>
                 {live && <span className="card-flag is-win" aria-hidden><Icon name="target" size={10} /></span>}
               </span>
               <span className="face-name">{idx.data.people[c.id].n}</span>
@@ -462,7 +467,7 @@ function Stage({ idx, puzzle, label, challenge }: { idx: Index; puzzle: PuzzleDe
       <FilmEnd idx={idx} id={puzzle.s} kicker="Start" />
       <div className="stage-mid">
         <span className="stage-line" aria-hidden />
-        <span className="par-pill">Shortest {puzzle.par}</span>
+        <span className="par-pill">Shortest: {puzzle.par} link{puzzle.par === 1 ? '' : 's'}</span>
         {challenge !== null && <span className="par-pill is-friend">Friend: {challenge} link{challenge === 1 ? '' : 's'}</span>}
       </div>
       <FilmEnd idx={idx} id={puzzle.e} kicker="Target" target />

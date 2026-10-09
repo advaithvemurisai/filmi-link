@@ -52,19 +52,45 @@ export function upstash(url: string, token: string): Store {
 export function memoryStore(): Store {
   const kv = new Map<string, string>()
   const sets = new Map<string, Set<string>>()
+  const expires = new Map<string, number>()
+
+  const prune = (k: string) => {
+    const at = expires.get(k)
+    if (at && at <= Date.now()) {
+      kv.delete(k)
+      expires.delete(k)
+      return true
+    }
+    return false
+  }
+
   return {
-    get: async (k) => kv.get(k) ?? null,
-    set: async (k, v) => void kv.set(k, v),
+    get: async (k) => {
+      if (prune(k)) return null
+      return kv.get(k) ?? null
+    },
+    set: async (k, v) => {
+      kv.set(k, v)
+      expires.delete(k)
+    },
     sadd: async (k, m) => void (sets.get(k) ?? sets.set(k, new Set()).get(k)!).add(m),
     srem: async (k, m) => void sets.get(k)?.delete(m),
     smembers: async (k) => [...(sets.get(k) ?? [])],
-    mget: async (keys) => keys.map((k) => kv.get(k) ?? null),
-    bump: async (k) => {
+    mget: async (keys) => keys.map((k) => {
+      if (prune(k)) return null
+      return kv.get(k) ?? null
+    }),
+    bump: async (k, ttlSeconds = 0) => {
+      prune(k)
       const n = Number(kv.get(k) ?? 0) + 1
       kv.set(k, String(n))
+      if (ttlSeconds > 0) expires.set(k, Date.now() + ttlSeconds * 1000)
       return n
     },
-    del: async (k) => void kv.delete(k),
+    del: async (k) => {
+      kv.delete(k)
+      expires.delete(k)
+    },
   }
 }
 

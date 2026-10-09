@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
-import { handle, memoryStore, upstash } from './api/sync'
+import { handle, memoryStore, upstash } from './api/sync.js'
 
 /**
  * Serves /api/sync during `npm run dev`, so accounts work locally without the Vercel CLI.
