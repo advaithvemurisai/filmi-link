@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Avatar, Icon, Modal, ParMeter, Poster, Stamp } from './Bits'
+import { Avatar, Icon, Modal, Poster, Stamp } from './Bits'
 import Walkthrough from './Walkthrough'
 import { Reminders } from './Reminders'
 import type { Index } from '../lib/graph'
-import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
+import { addDays, dayDiff, difficultyOf, puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 import { HOME_LANGS, SCRIPT, langName } from '../lib/format'
 import { computeStats, loadCast, rate, RATINGS, tierClass, type Result } from '../lib/storage'
 
@@ -70,6 +70,14 @@ export function Stats({
           ))}
         </div>
       )}
+      {s.played === 0 ? (
+        // A wall of zeros reads as failure; a first-timer gets one clear next step instead.
+        <div className="empty-state">
+          <Icon name="flame" size={40} className="streak-flame" />
+          <p><b>Your streak starts with today’s puzzle.</b><br />Solve a daily on its own day to light the flame, then keep it going.</p>
+          <button className="btn primary" onClick={onClose}>Play today’s puzzle</button>
+        </div>
+      ) : (<>
       <div className="streak-hero">
         <Icon name="flame" size={40} className={`streak-flame ${s.streak ? '' : 'is-cold'}`} />
         <div>
@@ -101,6 +109,7 @@ export function Stats({
           </div>
         ))}
       </div>
+      </>)}
 
       <section className="cast">
         <header>
@@ -141,10 +150,19 @@ export function Archive({
   onPick: (date: string) => void
   onClose: () => void
 }) {
+  const [show, setShow] = useState<'all' | 'todo' | 'done'>('all')
   const days = Math.max(0, dayDiff(file.epoch, today))
-  const dates = Array.from({ length: days + 1 }, (_, i) => addDays(today, -i))
+  const all = Array.from({ length: days + 1 }, (_, i) => addDays(today, -i))
+  const todo = all.filter((d) => !results[d])
+  const dates = show === 'todo' ? todo : show === 'done' ? all.filter((d) => results[d]) : all
   return (
     <Modal title="Archive" onClose={onClose}>
+      <div className="segmented" role="tablist" aria-label="Filter puzzles">
+        {([['all', `All ${all.length}`], ['todo', `Unplayed ${todo.length}`], ['done', `Played ${all.length - todo.length}`]] as const).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={show === k} className={show === k ? 'on' : ''} onClick={() => setShow(k)}>{label}</button>
+        ))}
+      </div>
+      {!dates.length && <p className="empty">{show === 'todo' ? 'You’ve played every puzzle so far.' : 'Nothing played yet.'}</p>}
       <ul className="archive">
         {dates.map((d) => {
           const p = puzzleFor(file, d)!
@@ -164,7 +182,9 @@ export function Archive({
                   </span>
                 </span>
                 <span className="archive-status">
-                  {r ? <Stamp rating={rate(r) ?? 'Shelved'} small /> : <ParMeter links={0} par={p.par} />}
+                  {r
+                    ? <Stamp rating={rate(r) ?? 'Shelved'} small />
+                    : <span className="archive-todo"><span className={`grade is-${difficultyOf(p).toLowerCase()}`}>{difficultyOf(p)}</span><span>Play <Icon name="arrow" size={12} /></span></span>}
                 </span>
               </button>
             </li>

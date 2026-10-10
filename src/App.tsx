@@ -13,6 +13,7 @@ import {
   type Result, type Track,
 } from './lib/storage'
 import { reportPlayed } from './lib/push'
+import { recordVisit } from './lib/metrics'
 import { fetchRouteShare, loadAccount, saveAccount, sync, SyncError, type Account, type HomeResults } from './lib/account'
 import { freeFromLink, parseFreeLink, validChallenge, validResults, type Friend } from './lib/results'
 
@@ -93,6 +94,8 @@ export default function App() {
   const [welcome, setWelcome] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState(0)
   const [routeShare, setRouteShare] = useState<{ count: number; total: number } | null>(null)
+
+  useEffect(() => recordVisit(today), [today])
 
   // Follow the clock: a tab left open past midnight should move on to the new day's puzzle.
   useEffect(() => {

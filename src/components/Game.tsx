@@ -7,6 +7,7 @@ import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bit
 import { ROLE_ICON, launchFrom } from './bit-helpers'
 import RouteMap from './RouteMap'
 import { Reminders } from './Reminders'
+import { event } from '../lib/metrics'
 
 const ROLE_ORDER: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
 const GROUPS: [Role, string][] = [['Director', 'Direction'], ['Music', 'Music'], ['Actor', 'Cast']]
@@ -66,7 +67,12 @@ export default function Game(props: Props) {
   const start: Node = { kind: 'film', id: puzzle.s }
 
   const [path, setPath] = useState<Node[]>(props.initialResult?.path ?? props.initialProgress?.path ?? [start])
-  const [startedAt] = useState(() => props.initialProgress?.startedAt ?? Date.now())
+  // The clock starts on the first pick, so reading the two films doesn't cost speed points.
+  // A saved 0 means the puzzle was opened but not started.
+  const [startedAt, setStartedAt] = useState(() => {
+    const p = props.initialProgress
+    return p && p.startedAt && p.path.length > 1 ? p.startedAt : 0
+  })
   const [hints, setHints] = useState(props.initialResult?.hints ?? props.initialProgress?.hints ?? 0)
   const [hint, setHint] = useState<Node | null>(null)
   const [result, setResult] = useState<Omit<Result, 'live'> | null>(props.initialResult)
@@ -74,6 +80,8 @@ export default function Game(props: Props) {
   const [now, setNow] = useState(Date.now())
   const [query, setQuery] = useState('')
   const [quitArmed, setQuitArmed] = useArmed()
+  /** Which daily this is, for analytics: a language code, 'all' for India, or 'free'. */
+  const metric = { daily: props.free ? 'free' : props.shareLang ?? 'all', no: props.dailyNo, hard, grade: difficultyOf(puzzle) }
   const listRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   // Time spent with the tab hidden doesn't count against the speed score.
@@ -108,7 +116,8 @@ export default function Game(props: Props) {
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
-  const elapsedSeconds = (at: number) => Math.round((at - startedAt - pausedMs.current - (hiddenAt.current ? at - hiddenAt.current : 0)) / 1000)
+  const elapsedSeconds = (at: number) =>
+    startedAt ? Math.round((at - startedAt - pausedMs.current - (hiddenAt.current ? at - hiddenAt.current : 0)) / 1000) : 0
 
   // Type anywhere (or press "/") to jump into the search box, so keyboard players never have to hunt for it.
   useEffect(() => {
@@ -175,6 +184,7 @@ export default function Game(props: Props) {
       hints, gaveUp, path: finalPath,
     }
     if (!gaveUp) setNewFaces(collectCast(finalPath, localDateKey()).length)
+    event(gaveUp ? 'puzzle_give_up' : 'puzzle_finish', { ...metric, links: r.links, par: r.par, over: r.links - r.par, hints: r.hints, seconds: r.seconds })
     setResult(r)
     props.onFinish(r)
   }
@@ -182,6 +192,11 @@ export default function Game(props: Props) {
   function go(node: Node, from?: Element | null) {
     // Every pick is permanent, even back to someone already in the chain: a loop costs its links.
     const next = [...path, node]
+    if (!startedAt) {
+      pausedMs.current = 0
+      setStartedAt(Date.now())
+      event('puzzle_start', metric)
+    }
     launchFrom(from?.querySelector('.poster, .avatar') ?? null)
     setPath(next)
     setHint(null)
@@ -197,6 +212,7 @@ export default function Game(props: Props) {
     if (sp && sp[1]) {
       setHint(sp[1])
       setHints((h) => h + 1)
+      event('hint', { ...metric, at: links })
       setQuery('')
     }
   }

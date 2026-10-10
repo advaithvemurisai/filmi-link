@@ -608,6 +608,9 @@ div.face .avatar { opacity: .85; }
 .archive-sub { font-size: 12px; color: var(--muted); font-weight: 400; }
 .archive-status { flex: none; }
 .archive-status .par-meter-label { display: none; }
+.archive-todo { display: grid; justify-items: end; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.archive-todo > span:last-child { display: inline-flex; align-items: center; gap: 3px; }
+.archive button:hover .archive-todo > span:last-child { color: var(--text); }
 .archive-status .pip { width: 10px; height: 10px; }
 
 /* Home cinema picker */
@@ -796,8 +799,8 @@ div.face .avatar { opacity: .85; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 720px) {
-  .nav-label { display: none; }
-  .nav-btn { padding: 7px 8px; }
+  /* Icons keep a small label underneath, so the phone nav isn't a row of guesses. */
+  .nav-btn { padding: 4px 8px; flex-direction: column; gap: 2px; font-size: 10.5px; }
 }
 @media (max-width: 560px) {
   .brand { font-size: 20px; }
