@@ -274,7 +274,7 @@ export default function Game(props: Props) {
                   <Icon name="search" size={16} />
                   <input
                     ref={searchRef}
-                    placeholder={current.kind === 'film' ? 'Find cast & crew (press / to search)' : 'Find a film (press / to search)'}
+                    placeholder={`${current.kind === 'film' ? 'Find cast & crew' : 'Find a film'}${KEYBOARD ? ' (press /)' : ''}`}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -344,6 +344,9 @@ export default function Game(props: Props) {
     </main>
   )
 }
+
+/** Only mention the "/" shortcut where there's a keyboard to press it on. */
+const KEYBOARD = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches
 
 const stagger = (i: number) => ({ '--i': Math.min(i, 24) }) as CSSProperties
 

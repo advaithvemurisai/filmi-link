@@ -843,15 +843,12 @@ div.face .avatar { opacity: .85; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
 }
 
-/* Touch screens: every control gets a thumb-sized target (44px is the usual floor). */
+/* Touch screens: small controls get an invisible 44px tap area, so nothing changes size on screen. */
 @media (pointer: coarse) {
-  .icon-btn { width: 44px; height: 44px; }
-  .nav-btn { min-height: 44px; padding: 7px 12px; }
-  .tool { min-height: 44px; }
-  .tracks button, .segmented button, .free-bar button { min-height: 40px; }
-  .switch { min-height: 44px; }
-  .player-pill { min-height: 44px; }
-  .card { min-height: 44px; }
+  .icon-btn, .player-pill, .switch, .tracks button, .free-bar button, .tool, .nav-btn { position: relative; }
+  .icon-btn::after, .player-pill::after, .switch::after, .tracks button::after, .free-bar button::after, .tool::after, .nav-btn::after {
+    content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+  }
 }
 
 /* A Blockbuster earns a slow gold glow on its stamp and frame. */
