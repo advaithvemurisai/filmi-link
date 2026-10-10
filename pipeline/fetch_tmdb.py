@@ -24,18 +24,19 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from graph_io import FILM_META_PATH, write_graph
+from graph_io import FILM_META_PATH, RETIRED_LANGUAGES, published_film_ids, write_graph
 
 API = "https://api.themoviedb.org/3"
 CACHE = Path(__file__).resolve().parent / ".cache"
 
 # Indian languages to pull. No per-language cap: every film with at least MIN_VOTES votes is kept.
 # Obscure films only ever appear mid-chain; puzzle endpoints come from the most-voted films.
-LANGUAGES = ["hi", "ta", "te", "ml", "kn", "mr", "bn", "pa", "gu", "or", "as"]
+# Bengali is retired (see RETIRED_LANGUAGES): not fetched, apart from films published puzzles still need.
+LANGUAGES = ["hi", "ta", "te", "ml", "kn", "mr", "pa", "gu", "or", "as"]
 MIN_VOTES = 1
 # New releases often sit at 0 votes for weeks or months, so films from last year onwards skip the vote floor.
 # They still need a person shared with another film to survive pruning, which keeps the junk out.
@@ -213,6 +214,11 @@ def main() -> None:
         recent.update(m["id"] for m in found if (m.get("release_date") or "") >= recent_since)
         print(f"{lang}: {len(found)} films + {len(new)} unvoted new releases")
 
+    # Films from retired industries that published puzzles still use are fetched by id and kept as history.
+    legacy = published_film_ids((today + timedelta(days=1)).isoformat())
+    for fid in legacy:
+        ids.setdefault(int(fid), "")
+
     # Recent films' credits are still being filled in on TMDb, so refetch them rather than trust the cache.
     fetch = lambda mid: get(f"/movie/{mid}", fresh=mid in recent, append_to_response="credits,alternative_titles")  # noqa: E731
     with ThreadPoolExecutor(max_workers=12) as pool:
@@ -228,6 +234,8 @@ def main() -> None:
         if d.get("vote_count", 0) < MIN_VOTES and 0 < (d.get("runtime") or 0) < MIN_RUNTIME:
             continue
         fid = str(d["id"])
+        if d.get("original_language") in RETIRED_LANGUAGES and fid not in legacy:
+            continue
         year = int(d["release_date"][:4]) if d.get("release_date") else None
         meta[fid] = {"d": d.get("release_date") or None, "g": [g["name"] for g in d.get("genres", [])]}
         films[fid] = {

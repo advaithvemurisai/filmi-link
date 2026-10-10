@@ -18,6 +18,28 @@ PUZZLES_PATH = DATA_DIR / "puzzles.json"
 FILM_META_PATH = Path(__file__).resolve().parent / "film_meta.json"
 
 
+# Industries no longer fetched or used for new puzzles. Their films stay in the graph only where an
+# already-published puzzle needs them (its endpoints and published alternate routes), so past puzzles,
+# archives and players' streaks keep working.
+RETIRED_LANGUAGES = {"bn"}
+
+
+def published_film_ids(until: str) -> set[str]:
+    """Every film an already-published puzzle (any track, up to and including `until`) starts, ends or routes through."""
+    from datetime import date
+
+    ids: set[str] = set()
+    for path in DATA_DIR.glob("puzzles*.json"):
+        data = json.loads(path.read_text())
+        epoch = date.fromisoformat(data["epoch"])
+        days = (date.fromisoformat(until) - epoch).days + 1
+        for p in data["puzzles"][:max(0, days)]:
+            ids.update((p["s"], p["e"]))
+            for route in p.get("alts", []):
+                ids.update(route[::2])
+    return ids
+
+
 def puzzles_path(track: str) -> Path:
     """puzzles.json for the pan-India daily, puzzles-<lang>.json for a home-industry daily."""
     return PUZZLES_PATH if track == "all" else DATA_DIR / f"puzzles-{track}.json"

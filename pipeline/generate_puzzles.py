@@ -39,7 +39,7 @@ from pathlib import Path
 import numpy as np
 from scipy import sparse
 
-from graph_io import FILM_META_PATH, load_graph, puzzles_path
+from graph_io import FILM_META_PATH, RETIRED_LANGUAGES, load_graph, puzzles_path
 
 HERE = Path(__file__).resolve().parent
 OVERRIDES_PATH = HERE / "overrides.json"
@@ -69,13 +69,13 @@ MIN_CONNECTED_PEOPLE = 6  # people with another film: the landing page offers th
 SKIP_GENRES = {"Documentary", "TV Movie"}
 # How widely each industry's films are watched across India; scales familiarity on the shared daily
 # so language rotation doesn't keep reaching for little-seen films from smaller industries.
-NATIONAL_REACH = {"hi": 1.0, "ta": 0.92, "te": 0.92, "ml": 0.88, "kn": 0.85, "bn": 0.6, "mr": 0.6}
+NATIONAL_REACH = {"hi": 1.0, "ta": 0.92, "te": 0.92, "ml": 0.88, "kn": 0.85, "mr": 0.6}
 # Rough share of shared-daily endpoints per industry; recent overuse of a language is penalised.
-LANG_TARGET = {"hi": 0.32, "ta": 0.17, "te": 0.16, "ml": 0.15, "kn": 0.1, "bn": 0.05, "mr": 0.05}
+LANG_TARGET = {"hi": 0.33, "ta": 0.18, "te": 0.17, "ml": 0.16, "kn": 0.1, "mr": 0.06}
 
 # Weekly theme rotations (weeks start on Monday).
 THEMES = {"all": ["released", "language", "decade", "composer"], "lang": ["released", "decade", "composer", None]}
-SPOTLIGHT = ["ml", "ta", "te", "kn", "bn", "mr", "hi"]
+SPOTLIGHT = ["ml", "ta", "te", "kn", "mr", "hi"]
 DECADES = [1990, 2000, 1980, 2010]
 
 
@@ -154,7 +154,7 @@ class Graph:
         connected = np.asarray(self.B @ (degree > 1).astype(float)).ravel()
         self.eligible = np.array([
             self.star[i] >= MIN_STAR_POWER and (self.year[i] or 0) >= MIN_YEAR and not genres[i] & SKIP_GENRES
-            and connected[i] >= MIN_CONNECTED_PEOPLE
+            and connected[i] >= MIN_CONNECTED_PEOPLE and self.lang[i] not in RETIRED_LANGUAGES
             for i in range(F)
         ])
 
@@ -300,7 +300,7 @@ def pool_for(G: Graph, track: str) -> list[int]:
     if track != "all":
         return [f for f in order if G.lang[f] == track][:400]
     pool: set[int] = set()
-    for l, n in [("hi", 250), ("ta", 150), ("te", 150), ("ml", 150), ("kn", 100), ("bn", 30), ("mr", 30)]:
+    for l, n in [("hi", 250), ("ta", 150), ("te", 150), ("ml", 150), ("kn", 100), ("mr", 30)]:
         pool.update([f for f in order if G.lang[f] == l][:n])
     return sorted(pool, key=lambda f: -G.pop[f])
 

@@ -5,7 +5,7 @@
 A daily game about how connected Indian cinema is. Think Wordle, but for movie lovers.
 
 ## Why I made this
-This is a passion project. I love Indian cinema: the Hindi blockbusters, the Tamil and Telugu mass entertainers, Malayalam's quiet brilliance, Kannada, Bengali, Marathi and everything in between. I wanted a small daily ritual that celebrates how tangled and wonderful that world is, and that is fun to play even if you only half remember who directed what.
+This is a passion project. I love Indian cinema: the Hindi blockbusters, the Tamil and Telugu mass entertainers, Malayalam's quiet brilliance, Kannada, Marathi and everything in between. I wanted a small daily ritual that celebrates how tangled and wonderful that world is, and that is fun to play even if you only half remember who directed what.
 
 The idea comes from [FilmLink](https://www.filmlink.io/), which I loved and which inspired this project. CinematicLink is my own take, built around Indian film industries.
 
