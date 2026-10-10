@@ -86,6 +86,17 @@ describe('shipped data', { timeout: 30_000 }, () => {
     }
   })
 
+  it('landing.json previews match what the full graph would show', () => {
+    if (!existsSync('public/data/landing.json')) return
+    const landing = JSON.parse(readFileSync('public/data/landing.json', 'utf8')) as { days: Record<string, { faces: [string, string][] }> }
+    const file = JSON.parse(readFileSync('public/data/puzzles.json', 'utf8')) as PuzzleFile
+    for (const [d, v] of Object.entries(landing.days)) {
+      const pz = puzzleFor(file, d)!
+      const ids = startFaces(idx, pz.s, 8, ruleOf(pz))
+      expect(v.faces.map(([id]) => id), d).toEqual(ids.length >= 3 ? ids : [])
+    }
+  })
+
   it.each(tracks)('%s: rule days only use credits the rule allows on their shortest routes', (path) => {
     const file = JSON.parse(readFileSync(path, 'utf8')) as PuzzleFile
     const ruled = file.puzzles.filter((pz) => pz.rule).slice(0, 60)

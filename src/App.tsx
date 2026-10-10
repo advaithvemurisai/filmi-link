@@ -4,7 +4,7 @@ import Landing from './components/Landing'
 import { Icon, PlayerBadge, type IconName } from './components/Bits'
 import { Archive, HomePicker, HowTo, Stats } from './components/Modals'
 import { AccountSheet, FriendsSheet } from './components/Social'
-import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type Index, type Node } from './lib/graph'
+import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type Index, type Node, type Role } from './lib/graph'
 import { addDays, localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import { HOME_LANGS, langName } from './lib/format'
 import {
@@ -64,6 +64,19 @@ function initialRoute(): Route {
 function validProgress(idx: Index, date: string, start: string, track: Track) {
   const p = loadProgress(date, track)
   return p && isValidChain(idx, p.path, start) ? p : null
+}
+
+/** landing.json: a few weeks of daily previews (see write_landing in pipeline/generate_puzzles.py). */
+interface LandingFile {
+  days: Record<string, { faces: [string, Role][] }>
+  films: GraphData['films']
+  people: GraphData['people']
+}
+export interface LandingPreview { idx: Index; faces: Record<string, { id: string; role: Role }[]> }
+function previewFrom(l: LandingFile): LandingPreview {
+  const idx = buildIndex({ meta: { source: 'tmdb', generated: '', films: 0, people: 0 }, films: l.films, people: l.people, credits: {} })
+  const faces = Object.fromEntries(Object.entries(l.days).map(([d, v]) => [d, v.faces.map(([id, role]) => ({ id, role }))]))
+  return { idx, faces }
 }
 
 const fetchJSON = <T,>(path: string) =>
@@ -129,8 +142,19 @@ export default function App() {
     window.scrollTo({ top: 0 })
   }, [])
 
+  // First visits get a 14 KB preview of today's films and first move, so the landing page is playable
+  // long before the 6 MB graph finishes downloading on a slow phone.
+  const [preview, setPreview] = useState<LandingPreview | null>(null)
+
   useEffect(() => {
-    Promise.all([fetchJSON<GraphData>('graph.json'), fetchJSON<PuzzleFile>('puzzles.json')])
+    const schedule = fetchJSON<PuzzleFile>('puzzles.json')
+    schedule.then(setFile).catch(() => { /* reported below */ })
+    // On the landing page the preview goes first, so the big graph doesn't compete with it (and the
+    // posters) for a slow connection; the graph follows as soon as the preview is in, or fails.
+    const first = route === 'landing'
+      ? fetchJSON<LandingFile>('landing.json').then((l) => setPreview(previewFrom(l))).catch(() => { /* the graph will do */ })
+      : Promise.resolve()
+    Promise.all([first.then(() => fetchJSON<GraphData>('graph.json')), schedule])
       .then(([g, p]) => {
         const index = buildIndex(g)
         setIdx(index)
@@ -140,6 +164,7 @@ export default function App() {
         if (shared) setMode({ kind: 'free', n: 1, ...shared })
       })
       .catch(() => setError('Could not load film data.'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // The home-industry schedule loads only for players who picked one.
@@ -282,7 +307,8 @@ export default function App() {
     const pz = file && puzzleFor(file, playDate)
     if (!pz) return
     // Never clobber a game already under way or finished today; only a fresh daily starts from the face.
-    const underway = (validProgress(idx!, playDate, pz.s, 'all')?.path.length ?? 0) > 1
+    // The first move can be made from the preview, before the full graph (and chain validation) is in.
+    const underway = ((idx ? validProgress(idx, playDate, pz.s, 'all') : loadProgress(playDate))?.path.length ?? 0) > 1
     if (!results[playDate] && !underway) {
       saveProgress(playDate, { path: [{ kind: 'film', id: pz.s }, { kind: 'person', id: personId }], startedAt: Date.now(), hints: 0 })
       flag('fl:coach', true)
@@ -297,6 +323,7 @@ export default function App() {
     return (
       <Landing
         idx={idx}
+        preview={preview}
         file={file}
         today={playDate}
         challenge={challenge?.track === 'all' ? challenge : null}

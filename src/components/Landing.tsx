@@ -4,10 +4,13 @@ import { ROLE_ICON } from './bit-helpers'
 import Credits from './Credits'
 import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
+import type { LandingPreview } from '../App'
 import { RULES, difficultyOf, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from '../lib/daily'
 
 interface Props {
   idx: Index | null
+  /** Today's films and first move from landing.json, used until the full graph arrives. */
+  preview: LandingPreview | null
   file: PuzzleFile | null
   today: string
   /** Links a friend used today, when the visitor arrived from their share link. */
@@ -25,22 +28,27 @@ const REPO = 'https://github.com/advaithvemurisai/filmi-link#puzzle-pipeline'
  * First-visit page: today's two films as a double bill, and the puzzle's first move. Tapping a face
  * starts the daily with that person already in the chain. Returning players skip this page.
  */
-export default function Landing({ idx, file, today, challenge, onStartFrom, onWalkthroughDone, onPlayDaily, onPlayRandom }: Props) {
+export default function Landing({ idx: full, preview, file, today, challenge, onStartFrom, onWalkthroughDone, onPlayDaily, onPlayRandom }: Props) {
   const puzzleNo = file ? puzzleNumber(file, today) : null
   const puzzle = file ? puzzleFor(file, today) : null
+  // The double bill and first move draw from the full graph once it's in, and from the preview before.
+  const previewHas = !!puzzle && !!preview && puzzle.s in preview.idx.data.films && puzzle.e in preview.idx.data.films
+  const idx = full ?? (previewHas ? preview!.idx : null)
   const ready = idx && puzzle
-  const languages = useMemo(() => (idx ? new Set(Object.values(idx.data.films).map((f) => f.l)).size : 0), [idx])
+  const languages = useMemo(() => (full ? new Set(Object.values(full.data.films).map((f) => f.l)).size : 0), [full])
   const day = new Date(today + 'T00:00')
   const date = day.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
   const links = puzzle ? `${puzzle.par} link${puzzle.par === 1 ? '' : 's'}` : null
 
   // The start film's director, composer and top-billed cast: the first move, playable right here.
   const faces = useMemo(() => {
-    if (!idx || !puzzle) return []
+    if (!puzzle) return []
+    if (!full) return (previewHas && preview!.faces[today]) || []
+    const idx = full
     const roles = new Map((idx.filmCredits[puzzle.s] ?? []).map((c) => [c.id, c.role]))
     const ids = startFaces(idx, puzzle.s, 8, ruleOf(puzzle))
     return ids.length >= MIN_START_FACES ? ids.map((id) => ({ id, role: roles.get(id)! })) : []
-  }, [idx, puzzle])
+  }, [full, preview, previewHas, puzzle, today])
 
   return (
     <div className="landing">
@@ -121,7 +129,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
             ? <button className="link-btn" onClick={onPlayDaily}>Open the full puzzle</button>
             : <button className="btn primary lg" onClick={onPlayDaily}><Icon name="play" size={16} /> Play today’s puzzle</button>}
           <span aria-hidden>·</span>
-          <button className="link-btn" onClick={onPlayRandom} disabled={!idx}>Random chain</button>
+          <button className="link-btn" onClick={onPlayRandom} disabled={!full}>Random chain</button>
         </div>
       </section>
 
@@ -134,8 +142,8 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
           <p>Every link is a person, then a film they made. Try a two-link chain before today’s show.</p>
         </header>
         <div className="screen">
-          {idx
-            ? <Walkthrough idx={idx} doneLabel="Now play today’s" onDone={onWalkthroughDone} />
+          {full
+            ? <Walkthrough idx={full} doneLabel="Now play today’s" onDone={onWalkthroughDone} />
             : <div className="bill-skeleton screen-skeleton" />}
         </div>
       </section>
@@ -154,9 +162,9 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
       </section>
 
       <footer className="footer">
-        {idx && (
+        {full && (
           <p>
-            {idx.data.meta.films.toLocaleString('en-IN')} films · {languages} languages · a new puzzle every midnight ·{' '}
+            {full.data.meta.films.toLocaleString('en-IN')} films · {languages} languages · a new puzzle every midnight ·{' '}
             <a href={REPO} target="_blank" rel="noreferrer">How the puzzles are made →</a>
           </p>
         )}

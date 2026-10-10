@@ -39,7 +39,7 @@ from pathlib import Path
 import numpy as np
 from scipy import sparse
 
-from graph_io import FILM_META_PATH, RETIRED_LANGUAGES, load_graph, puzzles_path
+from graph_io import DATA_DIR, FILM_META_PATH, RETIRED_LANGUAGES, load_graph, puzzles_path
 
 HERE = Path(__file__).resolve().parent
 OVERRIDES_PATH = HERE / "overrides.json"
@@ -626,6 +626,53 @@ def write_review(G: Graph, schedulers: list[Scheduler], today: date) -> None:
     print(f"wrote {REVIEW_PATH}")
 
 
+LANDING_DAYS = 21  # the weekly refresh rewrites it, so three weeks leaves slack for a missed run
+
+
+def write_landing(g: dict, ban_by_day: dict | None = None) -> None:
+    """A tiny landing.json so a first visit can show today's films and first move before the 6 MB graph
+    arrives on a slow phone. Faces follow the app's startFaces(): director, composer, then billed cast,
+    allowed by the day's rule, with another film to go to, at most 8 (none if fewer than 3)."""
+    data = json.loads(puzzles_path("all").read_text())
+    epoch = date.fromisoformat(data["epoch"])
+    credit_count: Counter = Counter(pid for rows in g["credits"].values() for pid, _ in rows)
+    films_of: dict[str, set] = {}
+    for fid, rows in g["credits"].items():
+        for pid, _ in rows:
+            films_of.setdefault(pid, set()).add(fid)
+    order = {"Director": 0, "Music": 1, "Actor": 2}
+    out = {"days": {}, "films": {}, "people": {}}
+    today = date.today()
+    for n in range(-1, LANDING_DAYS):
+        d = today + timedelta(days=n)
+        i = (d - epoch).days
+        if i < 0 or i >= len(data["puzzles"]):
+            continue
+        pz = data["puzzles"][i]
+        rule, ban = pz.get("rule"), pz.get("ban")
+
+        def allowed(pid: str, role: str) -> bool:
+            if rule == "nostars":
+                return len(films_of.get(pid, ())) < ban
+            if rule == "crew":
+                return role != "Actor"
+            return True
+
+        faces, seen = [], set()
+        for pid, role in sorted(g["credits"].get(pz["s"], []), key=lambda r: order[r[1]]):
+            if allowed(pid, role) and credit_count[pid] > 1 and pid not in seen:
+                seen.add(pid)
+                faces.append([pid, role])
+        faces = faces[:8] if len(faces) >= 3 else []
+        out["days"][d.isoformat()] = {"faces": faces}
+        for fid in (pz["s"], pz["e"]):
+            out["films"][fid] = g["films"][fid]
+        for pid, _ in faces:
+            out["people"][pid] = g["people"][pid]
+    (DATA_DIR / "landing.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
+    print(f"wrote landing.json: {len(out['days'])} days")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=400)
@@ -642,6 +689,7 @@ def main() -> None:
     overrides = json.loads(OVERRIDES_PATH.read_text()) if OVERRIDES_PATH.exists() else {}
     schedulers = [build_track(G, t, args, overrides) for t in args.tracks.split(",")]
     write_review(G, schedulers, date.today())
+    write_landing(load_graph())
 
 
 if __name__ == "__main__":
