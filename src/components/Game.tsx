@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
-import { difficultyOf, localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
+import { creditOk, isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role, type Rule } from '../lib/graph'
+import { RULES, difficultyOf, localDateKey, msToMidnight, ruleOf, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
 import { MAX_SECONDS, collectCast, isRareRoute, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bits'
@@ -65,6 +65,9 @@ export default function Game(props: Props) {
   const { idx, puzzle, hard } = props
   const { films } = idx.data
   const start: Node = { kind: 'film', id: puzzle.s }
+  // The weekly ladder's rule (No Superstars, Crew Call) narrows which credits link films; null on a normal day.
+  const rule = useMemo(() => ruleOf(puzzle), [puzzle])
+  const ok = (personId: string, role: Role) => creditOk(idx, rule, personId, role)
 
   const [path, setPath] = useState<Node[]>(props.initialResult?.path ?? props.initialProgress?.path ?? [start])
   // The clock starts on the first pick, so reading the two films doesn't cost speed points.
@@ -149,30 +152,40 @@ export default function Game(props: Props) {
   }, [props.initialResult])
 
   const optimal = useMemo(
-    () => (result ? shortestPath(idx, start, puzzle.e) : null),
+    () => (result ? shortestPath(idx, start, puzzle.e, rule) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [result, idx, puzzle.s, puzzle.e],
+    [result, idx, puzzle.s, puzzle.e, rule],
   )
 
   const inPath = useMemo(() => new Set(path.map((n) => `${n.kind}:${n.id}`)), [path])
-  const targetCast = useMemo(() => new Set((idx.filmCredits[puzzle.e] ?? []).map((c) => c.id)), [idx, puzzle.e])
+  const targetCast = useMemo(
+    () => new Set((idx.filmCredits[puzzle.e] ?? []).filter((c) => creditOk(idx, rule, c.id, c.role)).map((c) => c.id)),
+    [idx, puzzle.e, rule],
+  )
 
   const options = useMemo<Option[]>(() => {
+    const usable = (personId: string, role: Role) => creditOk(idx, rule, personId, role)
     if (current.kind === 'film') {
       return [...(idx.filmCredits[current.id] ?? [])]
+        .filter((c) => usable(c.id, c.role))
         .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
         .map((c) => ({ node: { kind: 'person' as const, id: c.id }, role: c.role }))
     }
     // One card per film, badged with their most notable role on it (director > music > actor).
     const best = new Map<string, Role>()
     for (const c of idx.personFilms[current.id] ?? []) {
+      if (!usable(current.id, c.role)) continue
       const r = best.get(c.id)
       if (!r || ROLE_ORDER[c.role] < ROLE_ORDER[r]) best.set(c.id, c.role)
     }
     return [...best]
       .sort(([a], [b]) => (films[b].y ?? 0) - (films[a].y ?? 0))
       .map(([id, role]) => ({ node: { kind: 'film' as const, id }, role }))
-  }, [current, idx, films])
+  }, [current, idx, films, rule])
+  /** People on the current film the rule keeps out, so the player knows why they're missing. */
+  const benched = current.kind === 'film' && rule
+    ? new Set((idx.filmCredits[current.id] ?? []).filter((c) => !ok(c.id, c.role)).map((c) => c.id)).size
+    : 0
 
   const q = query.trim().toLowerCase()
   const visible = q ? options.filter((o) => nodeLabel(idx, o.node).toLowerCase().includes(q)) : options
@@ -208,7 +221,7 @@ export default function Game(props: Props) {
   function takeHint() {
     // The hint for this step is already on screen; a second tap must not charge for it again.
     if (hint) return
-    const sp = shortestPath(idx, current, puzzle.e)
+    const sp = shortestPath(idx, current, puzzle.e, rule)
     if (sp && sp[1]) {
       setHint(sp[1])
       setHints((h) => h + 1)
@@ -263,6 +276,13 @@ export default function Game(props: Props) {
               </button>
             </div>
           </div>
+
+          {rule && (
+            <p className={`rule-strip is-${rule.kind}`} role="note">
+              <b>{RULES[rule.kind].name}.</b> {RULES[rule.kind].line}
+              {benched > 0 && <> <span className="rule-benched">{benched} {benched === 1 ? 'person' : 'people'} here can’t be used.</span></>}
+            </p>
+          )}
 
           {props.coach && (
             <p className="coach-strip" role="status">
@@ -330,7 +350,7 @@ export default function Game(props: Props) {
                           <div className="grid grid-people">
                             {items.map((o, i) => {
                               const used = inPath.has(`person:${o.node.id}`)
-                              const others = (idx.personFilms[o.node.id]?.length ?? 1) - 1
+                              const others = usableFilms(idx, rule, o.node.id) - 1
                               return (
                                 <PersonCard
                                   key={o.node.id + o.role} idx={idx} id={o.node.id} role={o.role} i={i}
@@ -366,6 +386,7 @@ export default function Game(props: Props) {
 
             <TargetPanel
               idx={idx}
+              rule={rule}
               filmId={puzzle.e}
               hard={!assist}
               reachable={assist && current.kind === 'film' ? new Set(options.map((o) => o.node.id)) : new Set()}
@@ -380,6 +401,11 @@ export default function Game(props: Props) {
 
 /** Only mention the "/" shortcut where there's a keyboard to press it on. */
 const KEYBOARD = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches
+
+/** Distinct films a person can link through under the day's rule. */
+function usableFilms(idx: Index, rule: Rule | null, personId: string) {
+  return new Set((idx.personFilms[personId] ?? []).filter((c) => creditOk(idx, rule, personId, c.role)).map((c) => c.id)).size
+}
 
 const stagger = (i: number) => ({ '--i': Math.min(i, 24) }) as CSSProperties
 
@@ -463,9 +489,10 @@ function FilmCard({
  * On phones the header stays pinned while you scroll, so the target never leaves the screen.
  */
 function TargetPanel({
-  idx, filmId, hard, reachable, onPick,
+  idx, rule, filmId, hard, reachable, onPick,
 }: {
   idx: Index
+  rule: Rule | null
   filmId: string
   hard: boolean
   reachable: Set<string>
@@ -475,7 +502,7 @@ function TargetPanel({
   const [open] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 960px)').matches)
   const f = idx.data.films[filmId]
   const rank = (id: string) => (!hard && reachable.has(id) ? 0 : 1)
-  const credits = [...(idx.filmCredits[filmId] ?? [])].sort(
+  const credits = [...(idx.filmCredits[filmId] ?? [])].filter((c) => creditOk(idx, rule, c.id, c.role)).sort(
     (a, b) => rank(a.id) - rank(b.id) || ROLE_ORDER[a.role] - ROLE_ORDER[b.role],
   )
   const liveCount = hard ? 0 : new Set(credits.filter((c) => reachable.has(c.id)).map((c) => c.id)).size
@@ -544,6 +571,7 @@ function Stage({ idx, puzzle, label, challenge }: { idx: Index; puzzle: PuzzleDe
         <span className="puzzle-label">{label}</span>
         <span className={`grade is-${difficultyOf(puzzle).toLowerCase()}`}>{difficultyOf(puzzle)}</span>
         {puzzle.theme && <span className="theme-ribbon">{puzzle.theme}</span>}
+        {puzzle.rule && <span className={`rule-ribbon is-${puzzle.rule}`}>{RULES[puzzle.rule].name}</span>}
       </div>
       <FilmEnd idx={idx} id={puzzle.s} kicker="Start" />
       <div className="stage-mid">
@@ -682,7 +710,7 @@ function ResultPanel({
     ? '⬛⬛⬛'
     : Array.from({ length: result.links }, (_, i) => (i < puzzle.par ? '🟩' : '🟧')).join('')
   const shareText = [
-    shareTitle,
+    puzzle.rule ? `${shareTitle} · ${RULES[puzzle.rule].name}` : shareTitle,
     `${films[puzzle.s].t} → ${films[puzzle.e].t}`,
     result.gaveUp
       ? `${blocks} Shelved (shortest ${puzzle.par})`

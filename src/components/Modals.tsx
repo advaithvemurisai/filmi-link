@@ -24,6 +24,7 @@ export function HowTo({ idx, onClose }: { idx: Index; onClose: () => void }) {
             <span className="legend-tiers" aria-hidden><i className="t-blockbuster" /><i className="t-hit" /><i className="t-flop" /><i className="t-disaster" /></span>
             Shortest chain = Blockbuster. Each extra link drops a tier: Hit, Flop, Disaster
           </li>
+          <li><span aria-hidden><Icon name="calendar" size={16} /></span> <b>The week gets harder</b>: Mon–Tue normal, Wed–Thu <b>No Superstars</b> (the most-connected stars are benched), Fri–Sun <b>Crew Call</b> (directors and composers only)</li>
           <li><span aria-hidden><Icon name="flame" size={16} /></span> <b>Hard mode</b>: picked before your first move; no hints, no signal bars, no rings</li>
         </ul>
       </details>

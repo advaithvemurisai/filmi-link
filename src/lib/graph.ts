@@ -19,6 +19,26 @@ export interface Index {
   data: GraphData
   filmCredits: Record<string, Credit[]>
   personFilms: Record<string, Credit[]>
+  /** Distinct films per person (the generator's "degree", used by the No Superstars cut). */
+  degree: Record<string, number>
+}
+
+/**
+ * A day's rule, from the weekly ladder. `nostars`: people with `ban` or more films sit the day out.
+ * `crew`: only director and music credits link films.
+ */
+export interface Rule { kind: 'nostars' | 'crew'; ban?: number }
+
+/** Whether one credit (a person in a role on some film) can be used under the day's rule. */
+export function creditOk(idx: Index, rule: Rule | null | undefined, personId: string, role: Role): boolean {
+  if (!rule) return true
+  if (rule.kind === 'nostars') return (idx.degree[personId] ?? 0) < (rule.ban ?? Infinity)
+  return role !== 'Actor'
+}
+
+/** Whether `personId` can link through `filmId` under the day's rule (any of their credits on it counts). */
+export function canUse(idx: Index, rule: Rule | null | undefined, filmId: string, personId: string): boolean {
+  return !rule || (idx.filmCredits[filmId] ?? []).some((c) => c.id === personId && creditOk(idx, rule, personId, c.role))
 }
 
 export function buildIndex(data: GraphData): Index {
@@ -28,19 +48,21 @@ export function buildIndex(data: GraphData): Index {
     filmCredits[fid] = rows.map(([id, role]) => ({ id, role }))
     for (const [pid, role] of rows) (personFilms[pid] ??= []).push({ id: fid, role })
   }
-  return { data, filmCredits, personFilms }
+  const degree: Record<string, number> = {}
+  for (const [pid, credits] of Object.entries(personFilms)) degree[pid] = new Set(credits.map((c) => c.id)).size
+  return { data, filmCredits, personFilms, degree }
 }
 
 const key = (n: Node) => `${n.kind[0]}:${n.id}`
 
-function neighbours(idx: Index, n: Node): Node[] {
+function neighbours(idx: Index, n: Node, rule?: Rule | null): Node[] {
   return n.kind === 'film'
-    ? (idx.filmCredits[n.id] ?? []).map((c) => ({ kind: 'person', id: c.id }))
-    : (idx.personFilms[n.id] ?? []).map((c) => ({ kind: 'film', id: c.id }))
+    ? (idx.filmCredits[n.id] ?? []).filter((c) => canUse(idx, rule, n.id, c.id)).map((c) => ({ kind: 'person', id: c.id }))
+    : (idx.personFilms[n.id] ?? []).filter((c) => canUse(idx, rule, c.id, n.id)).map((c) => ({ kind: 'film', id: c.id }))
 }
 
-/** Shortest chain from any node to a target film (inclusive of both ends), or null. */
-export function shortestPath(idx: Index, from: Node, targetFilm: string): Node[] | null {
+/** Shortest chain from any node to a target film (inclusive of both ends) under the day's rule, or null. */
+export function shortestPath(idx: Index, from: Node, targetFilm: string, rule?: Rule | null): Node[] | null {
   const goal = `f:${targetFilm}`
   const parent = new Map<string, Node | null>([[key(from), null]])
   const queue: Node[] = [from]
@@ -51,7 +73,7 @@ export function shortestPath(idx: Index, from: Node, targetFilm: string): Node[]
       for (let n: Node | null = cur; n; n = parent.get(key(n)) ?? null) path.unshift(n)
       return path
     }
-    for (const nb of neighbours(idx, cur)) {
+    for (const nb of neighbours(idx, cur, rule)) {
       if (!parent.has(key(nb))) {
         parent.set(key(nb), cur)
         queue.push(nb)
@@ -142,12 +164,12 @@ function filmDistances(idx: Index, start: string): Map<string, number> {
 /** Fewest faces worth showing as a first move; below this the landing page just offers Play. */
 export const MIN_START_FACES = 3
 
-export function startFaces(idx: Index, filmId: string, n = 8): string[] {
+export function startFaces(idx: Index, filmId: string, n = 8, rule?: Rule | null): string[] {
   const order: Record<Role, number> = { Director: 0, Music: 1, Actor: 2 }
   const seen = new Set<string>()
   return [...(idx.filmCredits[filmId] ?? [])]
     .sort((a, b) => order[a.role] - order[b.role])
-    .filter((c) => (idx.personFilms[c.id]?.length ?? 0) > 1 && !seen.has(c.id) && seen.add(c.id))
+    .filter((c) => canUse(idx, rule, filmId, c.id) && (idx.personFilms[c.id]?.length ?? 0) > 1 && !seen.has(c.id) && seen.add(c.id))
     .slice(0, n)
     .map((c) => c.id)
 }

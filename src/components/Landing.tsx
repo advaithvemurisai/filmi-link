@@ -4,7 +4,7 @@ import { ROLE_ICON } from './bit-helpers'
 import Credits from './Credits'
 import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
-import { difficultyOf, puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
+import { RULES, difficultyOf, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from '../lib/daily'
 
 interface Props {
   idx: Index | null
@@ -38,7 +38,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
   const faces = useMemo(() => {
     if (!idx || !puzzle) return []
     const roles = new Map((idx.filmCredits[puzzle.s] ?? []).map((c) => [c.id, c.role]))
-    const ids = startFaces(idx, puzzle.s)
+    const ids = startFaces(idx, puzzle.s, 8, ruleOf(puzzle))
     return ids.length >= MIN_START_FACES ? ids.map((id) => ({ id, role: roles.get(id)! })) : []
   }, [idx, puzzle])
 
@@ -56,7 +56,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
         {/* A cinema letterboard: today's show, put up by hand. */}
         <div className="marquee">
           <p className="marquee-top">
-            Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date}{puzzle ? ` · ${difficultyOf(puzzle)}` : ''}
+            Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date}{puzzle ? ` · ${difficultyOf(puzzle)}` : ''}{puzzle?.rule ? ` · ${RULES[puzzle.rule].name}` : ''}
           </p>
           <h1>
             {challenge
@@ -98,7 +98,8 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
 
         {ready && faces.length > 0 && (
           <div className="bill-start">
-            <p><span className="step-no">1</span> Pick a connector from <b>{idx.data.films[puzzle.s].t}</b> — directors, composers and actors all count.</p>
+            <p><span className="step-no">1</span> Pick a connector from <b>{idx.data.films[puzzle.s].t}</b>
+              {puzzle.rule ? <> — <b>{RULES[puzzle.rule].name}:</b> {RULES[puzzle.rule].line}</> : ' — directors, composers and actors all count.'}</p>
             <ul className="bill-faces">
               {faces.map((c, i) => (
                 <li key={c.id} style={{ animationDelay: `${300 + i * 50}ms` }}>

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
-import { buildIndex, isValidChain, linkCount, randomPuzzle, shortestPath, startFaces, type GraphData, type Node } from './graph'
+import { buildIndex, canUse, isValidChain, linkCount, randomPuzzle, shortestPath, startFaces, type GraphData, type Node } from './graph'
 import { freeFromLink, parseFreeLink, validChallenge, validResults } from './results'
-import { addDays, dayDiff, puzzleFor, puzzleNumber, type PuzzleFile } from './daily'
+import { addDays, dayDiff, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from './daily'
 import { collectCast, computeStats, loadCast, loadProgress, loadResults, ratingFor, type Result } from './storage'
 
 // Tiny graph: A —p1— B —p2— C,  D isolated.
@@ -77,12 +77,24 @@ describe('shipped data', { timeout: 30_000 }, () => {
     .map((name) => `public/data/${name}.json`)
     .filter((path) => existsSync(path))
 
-  it.each(tracks)('%s: every scheduled puzzle is solvable in exactly par links', (path) => {
+  it.each(tracks)('%s: every scheduled puzzle is solvable in exactly par links under its rule', (path) => {
     const file = JSON.parse(readFileSync(path, 'utf8')) as PuzzleFile
     for (const pz of file.puzzles.slice(0, 120)) {
-      const p = shortestPath(idx, { kind: 'film', id: pz.s }, pz.e)
+      const p = shortestPath(idx, { kind: 'film', id: pz.s }, pz.e, ruleOf(pz))
       expect(p, `${pz.s}→${pz.e}`).not.toBeNull()
-      expect(linkCount(p!)).toBe(pz.par)
+      expect(linkCount(p!), `${pz.s}→${pz.e} ${pz.rule ?? ''}`).toBe(pz.par)
+    }
+  })
+
+  it.each(tracks)('%s: rule days only use credits the rule allows on their shortest routes', (path) => {
+    const file = JSON.parse(readFileSync(path, 'utf8')) as PuzzleFile
+    const ruled = file.puzzles.filter((pz) => pz.rule).slice(0, 60)
+    for (const pz of ruled) {
+      for (const ids of pz.alts ?? []) {
+        for (let i = 1; i < ids.length; i += 2) {
+          expect(canUse(idx, ruleOf(pz), ids[i - 1], ids[i]) && canUse(idx, ruleOf(pz), ids[i + 1], ids[i]), `${pz.rule} ${ids.join('>')}`).toBe(true)
+        }
+      }
     }
   })
 

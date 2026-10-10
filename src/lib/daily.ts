@@ -1,3 +1,5 @@
+import type { Rule } from './graph'
+
 export interface PuzzleDef {
   s: string
   e: string
@@ -10,6 +12,18 @@ export interface PuzzleDef {
   alts?: string[][]
   /** Generator's grade from chain length and how many (findable) shortest routes exist: 1 easy, 2 medium, 3 hard. */
   d?: number
+  /** The weekly ladder's rule for the day: 'nostars' (people with `ban`+ films can't be used) or 'crew'. */
+  rule?: 'nostars' | 'crew'
+  ban?: number
+}
+
+/** The day's rule as the graph helpers take it, or null on a normal day. */
+export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban } : null)
+
+/** Name and one-line explanation of each rule, for the stage, the landing page and share text. */
+export const RULES: Record<Rule['kind'], { name: string; line: string }> = {
+  nostars: { name: 'No Superstars', line: 'The most-connected stars are benched today. Link through everyone else.' },
+  crew: { name: 'Crew Call', line: 'Only directors and music composers can link films today. No actors.' },
 }
 
 const GRADES = ['Easy', 'Medium', 'Hard']
