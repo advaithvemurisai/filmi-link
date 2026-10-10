@@ -74,7 +74,7 @@ NATIONAL_REACH = {"hi": 1.0, "ta": 0.92, "te": 0.92, "ml": 0.88, "kn": 0.85, "mr
 LANG_TARGET = {"hi": 0.33, "ta": 0.18, "te": 0.17, "ml": 0.16, "kn": 0.1, "mr": 0.06}
 
 # Weekly theme rotations (weeks start on Monday).
-THEMES = {"all": ["released", "language", "decade", "composer"], "lang": ["released", "decade", "composer", None]}
+THEMES = {"all": ["released", "language", "decade", "composer", "crossover"], "lang": ["released", "decade", "composer", None]}
 SPOTLIGHT = ["ml", "ta", "te", "kn", "mr", "hi"]
 DECADES = [1990, 2000, 1980, 2010]
 
@@ -352,6 +352,8 @@ def theme_label(G: Graph, theme, s: int, e: int, day: date) -> str:
         return f"'{str(param)[2:]}s Week" if param < 2000 else f"{param}s Week"
     if kind == "composer":
         return "Composer Week"
+    if kind == "crossover":
+        return "Crossover Week"
     f = s if theme_film_ok(G, theme, s, day) else e
     return f"Released this week: {G.film_ref(f)}"
 
@@ -433,7 +435,7 @@ class Scheduler:
         s, e = best["s"], best["e"]
         label = theme_label(G, theme, s, e, d) if theme else None
         # Themed starts are drawn from the theme's films; flip half of them so the theme isn't always on the left.
-        if theme and theme[0] != "composer" and rng.random() < 0.5:
+        if theme and theme[0] not in ("composer", "crossover") and rng.random() < 0.5:
             s, e = e, s
             best["info"]["routes"] = [r[::-1] for r in best["info"]["routes"]]
             best["info"]["alts"] = [r[::-1] for r in best["info"]["alts"]]
@@ -441,6 +443,11 @@ class Scheduler:
         pz = self.puzzle(s, e, best["info"], label)
         self.review.append({"date": d, "pz": pz, "best": best, "runners": cands[1:3]})
         return pz
+
+    def crossover(self, s: int, e: int, carrier: int) -> bool:
+        """Crossover Week: the person carrying the routes is a regular of a third industry, a guest in both films' worlds."""
+        home, share = self.G.home[carrier]
+        return share >= 0.6 and home not in (self.G.lang[s], self.G.lang[e])
 
     def _candidates(self, day, d, theme, fresh, fresh_arr, want, lo, hi, recent) -> list[dict]:
         G, rng = self.G, self.rng
@@ -487,11 +494,14 @@ class Scheduler:
                 over = lambda l: max(0.0, recent.get(l, 0) - LANG_TARGET.get(l, 0.03))
                 score -= 4.0 * (over(G.lang[s]) + np.array([over(l) for l in langs]))
             score = np.where(ok, score, -np.inf)
-            for i in np.argsort(-score)[:ENDS_PER_START]:
+            # Crossover pairs are rarer, so look further down the list for them.
+            for i in np.argsort(-score)[:ENDS_PER_START * (4 if theme and theme[0] == "crossover" else 1)]:
                 if not np.isfinite(score[i]):
                     break
                 e = int(ends[i])
                 info = self.describe(s, e, dist_f, dist_p, counts)
+                if theme and theme[0] == "crossover" and not self.crossover(s, e, info["carrier"]):
+                    continue
                 full = float(score[i])
                 if day - self.carrier_used.get(info["carrier"], -10**9) <= CARRIER_COOLDOWN:
                     full -= 1.0
