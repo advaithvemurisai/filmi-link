@@ -31,6 +31,7 @@ from pathlib import Path
 from graph_io import FILM_META_PATH, RETIRED_LANGUAGES, published_film_ids, write_graph
 
 API = "https://api.themoviedb.org/3"
+MERGES_PATH = Path(__file__).resolve().parent / "person_merges.json"
 CACHE = Path(__file__).resolve().parent / ".cache"
 
 # Indian languages to pull. No per-language cap: every film with at least MIN_VOTES votes is kept.
@@ -224,6 +225,11 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=12) as pool:
         details = list(pool.map(fetch, ids))
 
+    # One person split across two TMDb ids breaks chains that should work, so hand-confirmed duplicates
+    # (pipeline/person_merges.json: {"duplicate id": "canonical id"}) credit the canonical id. The duplicate
+    # keeps a name-only entry so chains saved before the merge still validate.
+    merges: dict[str, str] = json.loads(MERGES_PATH.read_text()) if MERGES_PATH.exists() else {}
+    merges.pop("_comment", None)
     films, people, credits, meta = {}, {}, {}, {}
     for d in details:
         # TMDb often leaves new Indian releases on "Post Production" after they're out, so a past release
@@ -248,6 +254,9 @@ def main() -> None:
         rows, seen = [], set()
 
         def add(person: dict, role: str) -> None:
+            if str(person["id"]) in merges:
+                people.setdefault(str(person["id"]), {"n": person["name"], "i": person.get("profile_path")})
+                person = {**person, "id": merges[str(person["id"])]}
             key = (str(person["id"]), role)
             if key in seen:
                 return
@@ -284,7 +293,7 @@ def main() -> None:
     for fid in [f for f, rows in credits.items() if not rows]:
         del credits[fid], films[fid]
     used = {pid for rows in credits.values() for pid, _ in rows}
-    people = {pid: v for pid, v in people.items() if pid in used}
+    people = {pid: v for pid, v in people.items() if pid in used or pid in merges}
     print(f"pruned {pruned} dead-end credits from lesser-known films")
 
     write_graph(films, people, credits, source="tmdb", generated=date.today().isoformat())

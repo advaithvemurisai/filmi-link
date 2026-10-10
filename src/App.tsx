@@ -106,7 +106,7 @@ export default function App() {
   const [account, setAccount] = useState<Account | null>(loadAccount)
   const [welcome, setWelcome] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState(0)
-  const [routeShare, setRouteShare] = useState<{ count: number; total: number } | null>(null)
+  const [routeShare, setRouteShare] = useState<{ count: number; total: number; top?: number } | null>(null)
 
   useEffect(() => recordVisit(today), [today])
 
@@ -475,6 +475,7 @@ export default function App() {
           player={account?.name ?? null}
           onSaveStreak={() => setSheet('account')}
           onOpenFriends={() => setSheet('friends')}
+          onPickHome={!home && mode.kind === 'daily' && track === 'all' ? () => setSheet('home') : undefined}
         />
       ) : (
         <div className="splash">The first daily puzzle hasn't dropped yet.</div>

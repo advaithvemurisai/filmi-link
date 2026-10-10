@@ -76,6 +76,9 @@ SKIP_GENRES = {"Documentary", "TV Movie"}
 # so language rotation doesn't keep reaching for little-seen films from smaller industries.
 NATIONAL_REACH = {"hi": 1.0, "ta": 0.92, "te": 0.92, "ml": 0.88, "kn": 0.85, "mr": 0.6}
 # Rough share of shared-daily endpoints per industry; recent overuse of a language is penalised.
+# Every industry gets at least one India daily a week: a language missing for the last 6 days is boosted.
+FLOOR_LANGS = ["hi", "ta", "te", "ml", "kn", "mr"]
+FLOOR_BONUS = 3.0
 LANG_TARGET = {"hi": 0.33, "ta": 0.18, "te": 0.17, "ml": 0.16, "kn": 0.1, "mr": 0.06}
 
 # Weekly theme rotations (weeks start on Monday).
@@ -457,6 +460,8 @@ class Scheduler:
         fresh = [f for f in self.pool if day - self.last_used.get(f, -10**9) > COOLDOWN_DAYS] or self.pool
         fresh_arr = np.array(fresh)
         window = [l for t, l in self.recent_langs if day - t < 14]
+        seen_week = {l for t, l in self.recent_langs if day - t < 6}
+        self.missing = [l for l in FLOOR_LANGS if l not in seen_week] if self.track == "all" else []
         recent = {l: c / max(1, len(window)) for l, c in Counter(window).items()}
 
         week_theme = theme_for(self.track, d, self.epoch)
@@ -537,6 +542,8 @@ class Scheduler:
                 score += 0.3 * (langs != G.lang[s])
                 over = lambda l: max(0.0, recent.get(l, 0) - LANG_TARGET.get(l, 0.03))
                 score -= 4.0 * (over(G.lang[s]) + np.array([over(l) for l in langs]))
+                if self.missing:
+                    score += FLOOR_BONUS * (np.isin(langs, self.missing) | (G.lang[s] in self.missing))
             score = np.where(ok, score, -np.inf)
             # Crossover pairs are rarer, so look further down the list for them.
             for i in np.argsort(-score)[:ENDS_PER_START * (4 if theme and theme[0] == "crossover" else 1)]:

@@ -1,0 +1,3 @@
+{
+  "_comment": "Hand-confirmed duplicates: {\"duplicate TMDb person id\": \"canonical id\"}. Only add a pair after checking both TMDb pages are the same person; see pipeline/merge_candidates.md."
+}

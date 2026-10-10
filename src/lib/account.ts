@@ -57,4 +57,4 @@ export const fetchFriends = (a: Account) => call<{ players: Friend[] }>({ action
 
 /** How many players took the same route as you on a day's pan-India daily (the server reads your stored chain). */
 export const fetchRouteShare = (a: Account, date: string) =>
-  call<{ count: number; total: number }>({ action: 'route', ...a, date })
+  call<{ count: number; total: number; top?: number }>({ action: 'route', ...a, date })

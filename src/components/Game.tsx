@@ -41,11 +41,13 @@ interface Props {
   /** First game after starting from the landing page: show a one-line guide instead of the tutorial. */
   coach: boolean
   /** How many players took the same route today (pan-India daily, signed-in players only). */
-  routeShare: { count: number; total: number } | null
+  routeShare: { count: number; total: number; top?: number } | null
   /** Signed-in player's name, or null when playing anonymously. */
   player: string | null
   onSaveStreak: () => void
   onOpenFriends: () => void
+  /** Offered after the India daily to players with no home cinema yet: a daily from their own industry. */
+  onPickHome?: () => void
 }
 
 type Option = { node: Node; role: Role }
@@ -688,14 +690,14 @@ function ScoreCard({ parts }: { parts: ScoreParts }) {
 
 function ResultPanel({
   idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, shareLang, free, friendPath,
-  onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
+  onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends, onPickHome,
 }: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null; newFaces: number }) {
   const [copied, setCopied] = useState(false)
   const { films, people } = idx.data
   const rating = result.gaveUp ? 'Shelved' : ratingFor(result.links, puzzle.par, result.hints)
   const diff = result.links - puzzle.par
   // A rare route (few other players took it) earns a bonus once the server has counted today's routes.
-  const pts = scoreFor({ ...result, par: puzzle.par, rare: !!routeShare && isRareRoute(routeShare.count, routeShare.total) })
+  const pts = scoreFor({ ...result, par: puzzle.par, rare: !!routeShare && isRareRoute(routeShare.count, routeShare.top ?? 0) })
   const blockbuster = rating === 'Blockbuster'
 
   const verdict = result.gaveUp
@@ -785,6 +787,17 @@ function ResultPanel({
           <summary><Icon name="route" size={16} /> Other shortest routes <em>{missed.length}</em><Icon name="chevron" size={14} className="chev" /></summary>
           {missed.map((p, i) => <Filmstrip key={i} idx={idx} path={p} replay label={`Another shortest route ${i + 1}`} />)}
         </details>
+      )}
+
+      {onPickHome && (
+        <div className="save-cta home-cta">
+          <Icon name="home" size={26} />
+          <div>
+            <b>Want a daily from your own industry?</b>
+            <span>Add a Hindi, Tamil, Telugu, Malayalam or Kannada daily, made only from that cinema’s films.</span>
+          </div>
+          <button className="btn" onClick={onPickHome}>Pick home cinema</button>
+        </div>
       )}
 
       {!player && !result.gaveUp && (

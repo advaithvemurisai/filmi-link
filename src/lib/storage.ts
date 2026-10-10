@@ -102,8 +102,11 @@ export const HINT_COST = 100
 export const SPEED_MAX = 100
 /** Bonus for a route few other players found that day (see isRareRoute). */
 export const RARE_BONUS = 100
-/** A route is rare when at least 3 players finished and you were alone on it, or under 10% took it. */
-export const isRareRoute = (count: number, total: number) => total >= 3 && (count <= 1 || count / total < 0.1)
+/**
+ * A route is rare when you were alone on it while a popular route (taken by `top` players, at least 3)
+ * existed. In a small group almost everyone is alone on a route, so being alone isn't enough on its own.
+ */
+export const isRareRoute = (count: number, top: number) => count <= 1 && top >= 3
 const FAST_SECONDS = 30
 const SLOW_SECONDS = 300
 

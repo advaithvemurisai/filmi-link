@@ -12,7 +12,8 @@
 
 export interface Store {
   get(key: string): Promise<string | null>
-  set(key: string, value: string): Promise<void>
+  /** SET, with an expiry when `ttlSeconds` is given. */
+  set(key: string, value: string, ttlSeconds?: number): Promise<void>
   sadd(key: string, member: string): Promise<void>
   srem(key: string, member: string): Promise<void>
   smembers(key: string): Promise<string[]>
@@ -34,7 +35,7 @@ export function upstash(url: string, token: string): Store {
   }
   return {
     get: async (k) => (await cmd('GET', k)) as string | null,
-    set: async (k, v) => void (await cmd('SET', k, v)),
+    set: async (k, v, ttl) => void (await (ttl ? cmd('SET', k, v, 'EX', ttl) : cmd('SET', k, v))),
     sadd: async (k, m) => void (await cmd('SADD', k, m)),
     srem: async (k, m) => void (await cmd('SREM', k, m)),
     smembers: async (k) => (await cmd('SMEMBERS', k)) as string[],
@@ -69,9 +70,10 @@ export function memoryStore(): Store {
       if (prune(k)) return null
       return kv.get(k) ?? null
     },
-    set: async (k, v) => {
+    set: async (k, v, ttl) => {
       kv.set(k, v)
-      expires.delete(k)
+      if (ttl) expires.set(k, Date.now() + ttl * 1000)
+      else expires.delete(k)
     },
     sadd: async (k, m) => void (sets.get(k) ?? sets.set(k, new Set()).get(k)!).add(m),
     srem: async (k, m) => void sets.get(k)?.delete(m),
@@ -183,8 +185,8 @@ function merge(into: Record<string, Entry>, incoming: unknown) {
   }
 }
 
-/** Same rule as the app's isRareRoute (src/lib/storage.ts): at least 3 finishers, and alone or under 10%. */
-const isRareRoute = (count: number, total: number) => total >= 3 && (count <= 1 || count / total < 0.1)
+/** Same rule as the app's isRareRoute (src/lib/storage.ts): alone on your route while another drew 3+. */
+const isRareRoute = (count: number, top: number) => count <= 1 && top >= 3
 
 const LANG_RE = /^[a-z]{2}$/
 const MAX_LANGS = 8
@@ -313,7 +315,11 @@ export async function handle(store: Store, method: string, body: unknown): Promi
     // Count every finished route per daily and day, so a route few players found can be flagged rare.
     const routeKey = (scope: string, d: string, e: Entry) => `${scope}|${d}|${e.path.map((n) => n.id).join('-')}`
     const counts = new Map<string, number>()
-    const bump = (k: string) => counts.set(k, (counts.get(k) ?? 0) + 1)
+    const bump = (k: string) => {
+      const n = (counts.get(k) ?? 0) + 1
+      counts.set(k, n)
+      return n
+    }
     const each = (p: Player, fn: (scope: string, d: string, e: Entry) => void) => {
       for (const [d, e] of Object.entries(p.results)) fn('all', d, e)
       for (const [lang, r] of Object.entries(p.home ?? {})) for (const [d, e] of Object.entries(r)) fn(lang, d, e)
@@ -321,12 +327,13 @@ export async function handle(store: Store, method: string, body: unknown): Promi
     for (const p of all) {
       each(p, (scope, d, e) => {
         if (!e.live || e.gaveUp) return
-        bump(routeKey(scope, d, e))
-        bump(`${scope}|${d}`)
+        const n = bump(routeKey(scope, d, e))
+        const top = `${scope}|${d}|top`
+        counts.set(top, Math.max(counts.get(top) ?? 0, n))
       })
     }
     const rare = (scope: string, d: string, e: Entry) =>
-      e.live && !e.gaveUp && isRareRoute(counts.get(routeKey(scope, d, e)) ?? 0, counts.get(`${scope}|${d}`) ?? 0)
+      e.live && !e.gaveUp && isRareRoute(counts.get(routeKey(scope, d, e)) ?? 0, counts.get(`${scope}|${d}|top`) ?? 0)
     // Chains stay private: friends see scores and a rare-route flag, not the route (no spoilers).
     const strip = (scope: string, r: Record<string, Entry>) =>
       Object.fromEntries(Object.entries(r).map(([d, e]) => [d, { ...e, path: undefined, rare: rare(scope, d, e) || undefined }]))
@@ -348,11 +355,18 @@ export async function handle(store: Store, method: string, body: unknown): Promi
     if (!e || e.gaveUp || !e.live) return fail(404, 'No finished chain for that day.')
     const routeKey = `cl:route:${date}:r:${e.path.map((n) => n.id).join('-')}`
     const totalKey = `cl:route:${date}:total`
+    // How many players took the day's most popular route, for the rare-route bonus.
+    const topKey = `cl:route:${date}:top`
     const first = (await store.bump(`cl:route:${date}:p:${p.name.toLowerCase()}`, ROUTE_TTL)) === 1
     const [count, total] = first
       ? [await store.bump(routeKey, ROUTE_TTL), await store.bump(totalKey, ROUTE_TTL)]
       : (await store.mget([routeKey, totalKey])).map((v) => Number(v) || 0)
-    return { status: 200, body: { count, total } }
+    let top = Number(await store.get(topKey)) || 0
+    if (count > top) {
+      top = count
+      await store.set(topKey, String(top), ROUTE_TTL)
+    }
+    return { status: 200, body: { count, total, top } }
   }
 
   if (b.action === 'push') {

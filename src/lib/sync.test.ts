@@ -82,11 +82,11 @@ describe('sync api', () => {
       tokens[name] = r.body.token as string
     }
     const ask = (name: string) => handle(store, 'POST', { action: 'route', name, token: tokens[name], date: day })
-    expect((await ask('Asha')).body).toEqual({ count: 1, total: 1 })
-    expect((await ask('Bhuvan')).body).toEqual({ count: 2, total: 2 })
-    expect((await ask('Chitra')).body).toEqual({ count: 1, total: 3 })
+    expect((await ask('Asha')).body).toEqual({ count: 1, total: 1, top: 1 })
+    expect((await ask('Bhuvan')).body).toEqual({ count: 2, total: 2, top: 2 })
+    expect((await ask('Chitra')).body).toEqual({ count: 1, total: 3, top: 2 })
     // Asking again doesn't count twice.
-    expect((await ask('Asha')).body).toEqual({ count: 2, total: 3 })
+    expect((await ask('Asha')).body).toEqual({ count: 2, total: 3, top: 2 })
   })
 
   it('has no route share for give-ups, archive plays or missing days', async () => {
@@ -145,6 +145,10 @@ describe('sync api', () => {
     const me = await handle(store, 'POST', { action: 'login', name: 'Kavya', pin: '1111', results: { '2026-10-09': other('9') } })
     await handle(store, 'POST', { action: 'login', name: 'Dev', pin: '1111', results: { '2026-10-09': other('2') } })
     await handle(store, 'POST', { action: 'login', name: 'Isha', pin: '1111', results: { '2026-10-09': other('2') } })
+    // Alone on a route isn't rare until a popular route (3+ players) exists.
+    const rows0 = (await handle(store, 'POST', { action: 'board', name: 'Kavya', token: me.body.token })).body.players as { name: string; results: Record<string, { rare?: boolean }> }[]
+    expect(rows0.find((p) => p.name === 'Kavya')!.results['2026-10-09'].rare).toBeUndefined()
+    await handle(store, 'POST', { action: 'login', name: 'Om', pin: '1111', results: { '2026-10-09': other('2') } })
     const board = await handle(store, 'POST', { action: 'board', name: 'Kavya', token: me.body.token })
     const rows = board.body.players as { name: string; results: Record<string, { rare?: boolean; path?: unknown }> }[]
     const day = (n: string) => rows.find((p) => p.name === n)!.results['2026-10-09']
