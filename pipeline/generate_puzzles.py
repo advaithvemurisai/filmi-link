@@ -289,6 +289,12 @@ class Graph:
         return picked
 
 
+def difficulty(par: int, total: float, fair: float) -> int:
+    """1 easy, 2 medium, 3 hard: longer chains, fewer shortest routes and fewer findable ones are harder."""
+    h = (par - 2) + (total < 10) + (fair < 3) + (total < 4)
+    return 1 if h <= 0 else 2 if h <= 2 else 3
+
+
 def band_score(x: float, lo: int, hi: int) -> np.ndarray:
     x = np.maximum(x, 1)
     return np.where(x < lo, -0.8 * np.log2(lo / x), np.where(x > hi, -0.8 * np.log2(x / hi), 0.0))
@@ -380,7 +386,8 @@ class Scheduler:
 
     def puzzle(self, s: int, e: int, info: dict, theme: str | None) -> dict:
         G = self.G
-        pz = {"s": G.fids[s], "e": G.fids[e], "par": int((len(info["routes"][0]) - 1) // 2)}
+        par = int((len(info["routes"][0]) - 1) // 2)
+        pz = {"s": G.fids[s], "e": G.fids[e], "par": par, "d": difficulty(par, info["total"], info["fair"])}
         if theme:
             pz["theme"] = theme
         if info["spot"]:
@@ -457,11 +464,20 @@ class Scheduler:
                 ok &= (total - counts["nomusic"][ends]) >= 1
             if not ok.any():
                 continue
+            # The weekday's chain length is a requirement, not a preference: famous films are nearly
+            # always 2 links apart, so a soft penalty let every day collapse to par 2. Relax only to the
+            # nearest length this start can actually reach.
+            gap = np.where(ok, np.abs(dist - want), np.inf)
+            ok &= gap == gap.min()
             hub_share = 1 - counts["nohub"][ends] / np.maximum(total, 1)
+            # Where the chain can't be as long as the day wants (within one language it rarely can),
+            # make it harder another way: insist on few shortest routes and few findable ones.
+            short = np.maximum(0, want - dist)
             score = (
                 -1.5 * np.abs(dist - want)
                 + 4.0 * (self.fam[s] + self.fam[ends]) / 2
-                + band_score(total, lo, hi)
+                + (1 + 2.5 * short) * band_score(total, lo, hi)
+                + short * band_score(counts["fair"][ends], 1, max(1, lo // 2))
                 - 2.0 * np.maximum(0, hub_share - 0.5)
                 + 0.5 * counts["fair"][ends] / np.maximum(total, 1)
             )

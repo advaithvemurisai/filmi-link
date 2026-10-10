@@ -8,7 +8,13 @@ export interface PuzzleDef {
   spot?: { p: string; t: string }
   /** Alternate shortest routes as id lists, films and people alternating, start first. */
   alts?: string[][]
+  /** Generator's grade from chain length and how many (findable) shortest routes exist: 1 easy, 2 medium, 3 hard. */
+  d?: number
 }
+
+const GRADES = ['Easy', 'Medium', 'Hard']
+/** The puzzle's own difficulty; older files without a grade fall back to its length. */
+export const difficultyOf = (p: PuzzleDef) => GRADES[Math.min(3, Math.max(1, p.d ?? p.par - 1)) - 1]
 export interface PuzzleFile { epoch: string; puzzles: PuzzleDef[] }
 
 const DAY = 86_400_000

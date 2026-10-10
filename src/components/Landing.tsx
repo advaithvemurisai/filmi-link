@@ -4,7 +4,7 @@ import { ROLE_ICON } from './bit-helpers'
 import Credits from './Credits'
 import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
-import { puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
+import { difficultyOf, puzzleFor, puzzleNumber, type PuzzleFile } from '../lib/daily'
 
 interface Props {
   idx: Index | null
@@ -19,8 +19,6 @@ interface Props {
   onPlayRandom: () => void
 }
 
-// Matches the generator's route band: forgiving early in the week, tight at the weekend.
-const DIFFICULTY = ['Hard', 'Easy', 'Easy', 'Medium', 'Medium', 'Medium', 'Hard']
 const REPO = 'https://github.com/advaithvemurisai/filmi-link#puzzle-pipeline'
 
 /**
@@ -58,7 +56,7 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
         {/* A cinema letterboard: today's show, put up by hand. */}
         <div className="marquee">
           <p className="marquee-top">
-            Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date} · {DIFFICULTY[day.getDay()]}
+            Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date}{puzzle ? ` · ${difficultyOf(puzzle)}` : ''}
           </p>
           <h1>
             {challenge

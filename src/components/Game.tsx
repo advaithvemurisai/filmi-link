@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
-import { localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
+import { difficultyOf, localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
 import { MAX_SECONDS, collectCast, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bits'
@@ -509,6 +509,7 @@ function Stage({ idx, puzzle, label, challenge }: { idx: Index; puzzle: PuzzleDe
       </div>
       <div className="stage-top">
         <span className="puzzle-label">{label}</span>
+        <span className={`grade is-${difficultyOf(puzzle).toLowerCase()}`}>{difficultyOf(puzzle)}</span>
         {puzzle.theme && <span className="theme-ribbon">{puzzle.theme}</span>}
       </div>
       <FilmEnd idx={idx} id={puzzle.s} kicker="Start" />
