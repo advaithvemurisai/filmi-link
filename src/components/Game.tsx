@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role } from '../lib/graph'
 import { difficultyOf, localDateKey, msToMidnight, type PuzzleDef } from '../lib/daily'
 import { IMG, clock } from '../lib/format'
-import { MAX_SECONDS, collectCast, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
+import { MAX_SECONDS, collectCast, isRareRoute, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bits'
 import { ROLE_ICON, launchFrom } from './bit-helpers'
 import RouteMap from './RouteMap'
@@ -16,6 +16,8 @@ interface Props {
   puzzle: PuzzleDef
   label: string
   hard: boolean
+  /** Before the first pick the player chooses Normal or Hard; the choice then holds for the puzzle. */
+  onHardChange: (hard: boolean) => void
   initialProgress: Progress | null
   initialResult: Result | null
   onProgress: (p: Progress) => void
@@ -80,6 +82,9 @@ export default function Game(props: Props) {
 
   const current = path[path.length - 1]
   const links = linkCount(path)
+  // The "one tap from the target" rings are a lifeline, not a guide: they appear only once the
+  // player has spent the shortest chain's links and is behind. Hard mode never shows them.
+  const assist = !hard && links >= puzzle.par
 
   useEffect(() => {
     if (result) return
@@ -213,8 +218,20 @@ export default function Game(props: Props) {
         <ResultPanel {...props} result={result} optimal={optimal} newFaces={newFaces} />
       ) : (
         <>
+          {path.length === 1 && (
+            <div className="mode-pick" role="radiogroup" aria-label="Difficulty for this puzzle">
+              <button role="radio" aria-checked={!hard} className={!hard ? 'on' : ''} onClick={() => props.onHardChange(false)}>
+                <b>Normal</b><span>Hints and signal bars</span>
+              </button>
+              <button role="radio" aria-checked={hard} className={hard ? 'on' : ''} onClick={() => props.onHardChange(true)}>
+                <b>Hard</b><span>No hints, no aids</span>
+              </button>
+            </div>
+          )}
+
           <div className="toolbar">
             <ParMeter links={links} par={puzzle.par} />
+            {hard && path.length > 1 && <span className="hard-badge" title="Hard mode for this puzzle">Hard</span>}
             <span className="timer" aria-label="Time"><Icon name="timer" size={14} /> {clock(seconds)}</span>
             <div className="tools">
               {!hard && (
@@ -302,7 +319,7 @@ export default function Game(props: Props) {
                                 <PersonCard
                                   key={o.node.id + o.role} idx={idx} id={o.node.id} role={o.role} i={i}
                                   others={others} hard={hard} used={used}
-                                  win={!hard && !used && targetCast.has(o.node.id)} hint={isHint(o.node)}
+                                  win={assist && !used && targetCast.has(o.node.id)} hint={isHint(o.node)}
                                   onPick={(el) => go(o.node, el)}
                                 />
                               )
@@ -334,8 +351,8 @@ export default function Game(props: Props) {
             <TargetPanel
               idx={idx}
               filmId={puzzle.e}
-              hard={hard}
-              reachable={current.kind === 'film' ? new Set(options.map((o) => o.node.id)) : new Set()}
+              hard={!assist}
+              reachable={assist && current.kind === 'film' ? new Set(options.map((o) => o.node.id)) : new Set()}
               onPick={(id, el) => go({ kind: 'person', id }, el)}
             />
           </div>
@@ -599,7 +616,7 @@ function shareQuery(puzzle: PuzzleDef, result: Omit<Result, 'live'>, dailyNo: nu
 
 /** The 0-1000 score with where each point came from, so the number is never a mystery. */
 function ScoreCard({ parts }: { parts: ScoreParts }) {
-  const rows: [string, number][] = [['Links', parts.links], ['Hints', parts.hints], ['Speed', parts.speed]]
+  const rows: [string, number][] = [['Links', parts.links], ['Hints', parts.hints], ['Speed', parts.speed], ...(parts.rare ? [['Rare route', parts.rare] as [string, number]] : [])]
   return (
     <div className="score-card" aria-label={`Score ${parts.total} out of 1000`}>
       <div className="score-total"><b>{parts.total}</b><span>/ 1000</span></div>
@@ -620,7 +637,8 @@ function ResultPanel({
   const { films, people } = idx.data
   const rating = result.gaveUp ? 'Shelved' : ratingFor(result.links, puzzle.par, result.hints)
   const diff = result.links - puzzle.par
-  const pts = scoreFor({ ...result, par: puzzle.par })
+  // A rare route (few other players took it) earns a bonus once the server has counted today's routes.
+  const pts = scoreFor({ ...result, par: puzzle.par, rare: !!routeShare && isRareRoute(routeShare.count, routeShare.total) })
   const blockbuster = rating === 'Blockbuster'
 
   const verdict = result.gaveUp

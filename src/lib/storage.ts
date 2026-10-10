@@ -90,20 +90,30 @@ export function ratingFor(links: number, par: number, hints = 0): Rating {
 /** Points for the links used: full marks for the shortest chain, then steeply less for each extra link. */
 const LINK_POINTS = [800, 550, 300, 100]
 export const HINT_COST = 100
-/** Up to this many bonus points for a quick solve: full under FAST_SECONDS, none past SLOW_SECONDS. */
-export const SPEED_MAX = 200
+/** Up to this many bonus points for a quick solve: full under FAST_SECONDS, none past SLOW_SECONDS.
+ * Kept small so film knowledge, not tapping fast, decides the board when everyone finds the shortest chain. */
+export const SPEED_MAX = 100
+/** Bonus for a route few other players found that day (see isRareRoute). */
+export const RARE_BONUS = 100
+/** A route is rare when at least 3 players finished and you were alone on it, or under 10% took it. */
+export const isRareRoute = (count: number, total: number) => total >= 3 && (count <= 1 || count / total < 0.1)
 const FAST_SECONDS = 30
 const SLOW_SECONDS = 300
 
-export interface ScoreParts { links: number; hints: number; speed: number; total: number }
-/** 0-1000 score: efficiency dominates, each hint costs points, a fast solve earns a bonus. A give-up scores 0. */
-export function scoreFor(r: Pick<Result, 'links' | 'par' | 'gaveUp'> & { seconds?: number; hints?: number }): ScoreParts {
-  if (r.gaveUp) return { links: 0, hints: 0, speed: 0, total: 0 }
+export interface ScoreParts { links: number; hints: number; speed: number; rare: number; total: number }
+/**
+ * 0-1000 score: efficiency dominates (800), each hint costs points, a fast solve earns up to 100 and a rare
+ * route another 100. A give-up scores 0. `rare` comes from the server once other players' routes are known.
+ */
+export function scoreFor(r: Pick<Result, 'links' | 'par' | 'gaveUp'> & { seconds?: number; hints?: number; rare?: boolean }): ScoreParts {
+  if (r.gaveUp) return { links: 0, hints: 0, speed: 0, rare: 0, total: 0 }
   const links = LINK_POINTS[Math.min(LINK_POINTS.length - 1, Math.max(0, r.links - r.par))]
   const hints = -Math.min(links, (r.hints ?? 0) * HINT_COST)
   const t = r.seconds ?? SLOW_SECONDS
   const speed = Math.round(SPEED_MAX * Math.min(1, Math.max(0, (SLOW_SECONDS - t) / (SLOW_SECONDS - FAST_SECONDS))))
-  return { links, hints, speed, total: links + hints + speed }
+  // Only a shortest chain earns it: a long detour is "rare" without being clever.
+  const rare = r.rare && r.links <= r.par ? RARE_BONUS : 0
+  return { links, hints, speed, rare, total: links + hints + speed + rare }
 }
 
 export const rate = (r: Score): Rating | null => (r.gaveUp ? null : ratingFor(r.links, r.par, r.hints))

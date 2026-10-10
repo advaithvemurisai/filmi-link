@@ -92,8 +92,6 @@ export default function App() {
   const [account, setAccount] = useState<Account | null>(loadAccount)
   const [welcome, setWelcome] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState(0)
-  /** Hard mode locks once a puzzle has its first pick, so aids can't be toggled mid-game. */
-  const [underway, setUnderway] = useState(false)
   const [routeShare, setRouteShare] = useState<{ count: number; total: number } | null>(null)
 
   // Follow the clock: a tab left open past midnight should move on to the new day's puzzle.
@@ -336,7 +334,6 @@ export default function App() {
     }
   }
 
-  const modeLocked = underway || (mode.kind === 'daily' && !!activeResults[mode.date])
   const friendHere = mode.kind === 'daily' && !!challenge && track === challenge.track && mode.date === challenge.date
   const friend = mode.kind === 'free' ? mode.friend ?? null : friendHere ? challenge : null
   const isDaily = (t: Track) => mode.kind === 'daily' && mode.date === today && track === t
@@ -355,12 +352,6 @@ export default function App() {
           <NavBtn icon="stats" label="Stats" onClick={() => setSheet('stats')} />
           <NavBtn icon="trophy" label="Friends" onClick={() => setSheet('friends')} />
           <button className="icon-btn" onClick={() => setSheet('how')} aria-label="How to play"><Icon name="help" size={17} /></button>
-          <label className={`switch ${settings.hard ? 'on' : ''} ${modeLocked ? 'is-locked' : ''}`}
-            title={modeLocked ? 'Hard mode is locked once a puzzle is under way' : 'Hard mode: no hints, no signal bars'}>
-            <input type="checkbox" checked={settings.hard} disabled={modeLocked} onChange={() => updateSettings({ ...settings, hard: !settings.hard })} />
-            <span className="switch-track" aria-hidden><i /></span>
-            <span>Hard</span>
-          </label>
         </nav>
         <button className={`player-pill ${account ? '' : 'is-anon'}`} onClick={() => setSheet('account')}
           title={account ? `Signed in as ${account.name}` : 'Save your streak'}>
@@ -415,6 +406,7 @@ export default function App() {
           puzzle={puzzle}
           label={label}
           hard={settings.hard}
+          onHardChange={(h) => updateSettings({ ...settings, hard: h })}
           shareTitle={shareTitle}
           isToday={mode.kind === 'daily' && mode.date === today}
           dailyNo={mode.kind === 'daily' ? dailyNo : null}
@@ -427,7 +419,6 @@ export default function App() {
           initialResult={mode.kind === 'daily' ? activeResults[mode.date] ?? null : null}
           initialProgress={mode.kind === 'daily' ? validProgress(idx, mode.date, puzzle.s, track) : null}
           onProgress={(p) => {
-            setUnderway(p.path.length > 1)
             if (mode.kind === 'daily') saveProgress(mode.date, p, track)
           }}
           onFinish={(r) => {

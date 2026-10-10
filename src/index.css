@@ -120,7 +120,6 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .switch input { position: absolute; opacity: 0; pointer-events: none; }
 .switch-track { width: 30px; height: 18px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); position: relative; transition: background .15s; }
 .switch-track i { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
-.switch.is-locked { opacity: .55; cursor: not-allowed; }
 .switch.on { color: var(--text); font-weight: 600; }
 .switch.on .switch-track { background: var(--accent); border-color: var(--accent); }
 .switch.on .switch-track i { transform: translateX(12px); background: #fff; }
@@ -244,6 +243,16 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .par-pill.is-friend { border-color: var(--accent-text); color: var(--accent-text); }
 .coach-strip { margin: 0 2px 10px; padding: 10px 14px; border-radius: 8px; background: var(--bg-2); border-left: 3px solid var(--accent-text); font-size: 14px; line-height: 1.5; color: var(--muted); }
 .coach-strip b { color: var(--text); }
+
+/* Normal / Hard, chosen before the first pick */
+.mode-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 2px 0; }
+.mode-pick button { display: grid; gap: 2px; text-align: left; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.mode-pick button b { font-family: var(--display); font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.mode-pick button span { font-size: 12.5px; color: var(--muted); }
+.mode-pick button:hover { border-color: var(--muted); }
+.mode-pick button.on { border-color: var(--text); background: var(--surface-2); }
+.mode-pick button.on:last-child { border-color: var(--accent-text); }
+.hard-badge { font-family: var(--display); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; color: var(--accent-text); border: 1px solid currentColor; }
 
 /* ---------- toolbar ---------- */
 .toolbar { display: flex; align-items: center; gap: 12px; margin: 16px 2px 8px; flex-wrap: wrap; }

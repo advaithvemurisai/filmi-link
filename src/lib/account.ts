@@ -2,7 +2,7 @@ import type { Result, Score } from './storage'
 
 /** A signed-in player on this device. The PIN is never stored; the server's token stands in for it. */
 export interface Account { name: string; token: string }
-type FriendScores = Record<string, Score & Pick<Result, 'seconds' | 'hints'>>
+type FriendScores = Record<string, Score & Pick<Result, 'seconds' | 'hints'> & { rare?: boolean }>
 /** A friend's scores for the India daily plus any home-cinema dailies, never their chains. */
 export interface Friend { name: string; results: FriendScores; home?: Record<string, FriendScores> }
 

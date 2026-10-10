@@ -3,8 +3,12 @@ import { bestByDay, computeStats, dayPoints, scoreFor } from './storage'
 
 const base = { par: 3, gaveUp: false }
 describe('scoreFor', () => {
-  it('maxes at 1000 for a fast shortest chain', () => {
-    expect(scoreFor({ ...base, links: 3, seconds: 20, hints: 0 }).total).toBe(1000)
+  it('maxes at 1000 for a fast, rare shortest chain', () => {
+    expect(scoreFor({ ...base, links: 3, seconds: 20, hints: 0 }).total).toBe(900)
+    expect(scoreFor({ ...base, links: 3, seconds: 20, hints: 0, rare: true }).total).toBe(1000)
+  })
+  it('only rewards a rare route on the shortest chain', () => {
+    expect(scoreFor({ ...base, links: 4, seconds: 400, hints: 0, rare: true }).rare).toBe(0)
   })
   it('gives nothing for a give-up', () => {
     expect(scoreFor({ ...base, links: 3, gaveUp: true, seconds: 5 }).total).toBe(0)
@@ -19,17 +23,17 @@ describe('scoreFor', () => {
   })
   it('never goes negative and speed fades out', () => {
     expect(scoreFor({ ...base, links: 9, seconds: 9999, hints: 5 }).total).toBe(0)
-    expect(scoreFor({ ...base, links: 3, seconds: 165 }).speed).toBe(100)
+    expect(scoreFor({ ...base, links: 3, seconds: 165 }).speed).toBe(50)
   })
   it('feeds stats averages', () => {
     const s = computeStats({ '2026-10-01': { ...base, links: 3, live: true, seconds: 20, hints: 0 } }, '2026-10-01')
-    expect(s.avgScore).toBe(1000)
-    expect(s.bestScore).toBe(1000)
+    expect(s.avgScore).toBe(900)
+    expect(s.bestScore).toBe(900)
   })
 })
 
 describe('dayPoints and bestByDay', () => {
-  const win = { par: 2, links: 2, seconds: 20, hints: 0, gaveUp: false, live: true } // 1000 pts
+  const win = { par: 2, links: 2, seconds: 20, hints: 0, gaveUp: false, live: true, rare: true } // 1000 pts
   const ok = { ...win, links: 3, seconds: 400 } // 550 pts
 
   it('counts the India daily in full and only a quarter of the best home daily', () => {

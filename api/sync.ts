@@ -183,6 +183,9 @@ function merge(into: Record<string, Entry>, incoming: unknown) {
   }
 }
 
+/** Same rule as the app's isRareRoute (src/lib/storage.ts): at least 3 finishers, and alone or under 10%. */
+const isRareRoute = (count: number, total: number) => total >= 3 && (count <= 1 || count / total < 0.1)
+
 const LANG_RE = /^[a-z]{2}$/
 const MAX_LANGS = 8
 
@@ -306,14 +309,32 @@ export async function handle(store: Store, method: string, body: unknown): Promi
     if ('status' in me) return me
     const keys = await store.smembers(USERS)
     const rows = await store.mget(keys.map(userKey))
-    const players = rows.flatMap((raw) => {
-      if (!raw) return []
-      const p = JSON.parse(raw) as Player
-      // Chains stay private: friends see scores, not the route (no spoilers).
-      const strip = (r: Record<string, Entry>) => Object.fromEntries(Object.entries(r).map(([d, e]) => [d, { ...e, path: undefined }]))
-      const home = Object.fromEntries(Object.entries(p.home ?? {}).map(([lang, r]) => [lang, strip(r)]))
-      return [{ name: p.name, results: strip(p.results), home }]
-    })
+    const all = rows.flatMap((raw) => (raw ? [JSON.parse(raw) as Player] : []))
+    // Count every finished route per daily and day, so a route few players found can be flagged rare.
+    const routeKey = (scope: string, d: string, e: Entry) => `${scope}|${d}|${e.path.map((n) => n.id).join('-')}`
+    const counts = new Map<string, number>()
+    const bump = (k: string) => counts.set(k, (counts.get(k) ?? 0) + 1)
+    const each = (p: Player, fn: (scope: string, d: string, e: Entry) => void) => {
+      for (const [d, e] of Object.entries(p.results)) fn('all', d, e)
+      for (const [lang, r] of Object.entries(p.home ?? {})) for (const [d, e] of Object.entries(r)) fn(lang, d, e)
+    }
+    for (const p of all) {
+      each(p, (scope, d, e) => {
+        if (!e.live || e.gaveUp) return
+        bump(routeKey(scope, d, e))
+        bump(`${scope}|${d}`)
+      })
+    }
+    const rare = (scope: string, d: string, e: Entry) =>
+      e.live && !e.gaveUp && isRareRoute(counts.get(routeKey(scope, d, e)) ?? 0, counts.get(`${scope}|${d}`) ?? 0)
+    // Chains stay private: friends see scores and a rare-route flag, not the route (no spoilers).
+    const strip = (scope: string, r: Record<string, Entry>) =>
+      Object.fromEntries(Object.entries(r).map(([d, e]) => [d, { ...e, path: undefined, rare: rare(scope, d, e) || undefined }]))
+    const players = all.map((p) => ({
+      name: p.name,
+      results: strip('all', p.results),
+      home: Object.fromEntries(Object.entries(p.home ?? {}).map(([lang, r]) => [lang, strip(lang, r)])),
+    }))
     return { status: 200, body: { players } }
   }
 

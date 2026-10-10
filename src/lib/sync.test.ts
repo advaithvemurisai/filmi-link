@@ -138,4 +138,18 @@ describe('sync api', () => {
     expect(me.home.te['2026-10-08'].links).toBe(2)
     expect(JSON.parse(JSON.stringify(me.home.te['2026-10-08'])).path).toBeUndefined()
   })
+
+  it('flags a route as rare on the board when few players took it, without revealing it', async () => {
+    const store = memoryStore()
+    const other = (id: string) => entry(2, { path: [{ kind: 'film', id: '1' }, { kind: 'person', id }, { kind: 'film', id: '3' }] })
+    const me = await handle(store, 'POST', { action: 'login', name: 'Kavya', pin: '1111', results: { '2026-10-09': other('9') } })
+    await handle(store, 'POST', { action: 'login', name: 'Dev', pin: '1111', results: { '2026-10-09': other('2') } })
+    await handle(store, 'POST', { action: 'login', name: 'Isha', pin: '1111', results: { '2026-10-09': other('2') } })
+    const board = await handle(store, 'POST', { action: 'board', name: 'Kavya', token: me.body.token })
+    const rows = board.body.players as { name: string; results: Record<string, { rare?: boolean; path?: unknown }> }[]
+    const day = (n: string) => rows.find((p) => p.name === n)!.results['2026-10-09']
+    expect(day('Kavya').rare).toBe(true)
+    expect(day('Dev').rare).toBeUndefined()
+    expect(day('Kavya').path).toBeUndefined()
+  })
 })

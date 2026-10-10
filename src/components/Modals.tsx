@@ -15,7 +15,7 @@ export function HowTo({ idx, onClose }: { idx: Index; onClose: () => void }) {
       <details className="rules">
         <summary>Rules and signals <Icon name="chevron" size={14} /></summary>
         <ul className="howto-legend">
-          <li><span className="legend-ring" aria-hidden><Icon name="target" size={13} /></span> Ringed cards lead straight to the target</li>
+          <li><span className="legend-ring" aria-hidden><Icon name="target" size={13} /></span> Ringed cards lead straight to the target (shown once you’re over the shortest chain)</li>
           <li><span className="reach" aria-hidden><i className="on" /><i className="on" /><i className="on" /><i /><i /></span> How many other films they have</li>
           <li><span aria-hidden><Icon name="director" size={16} /> <Icon name="music" size={16} /></span> Director / music composer</li>
           <li><span aria-hidden><Icon name="arrow" size={16} /></span> Every choice is permanent, so choose your next link carefully</li>
@@ -24,7 +24,7 @@ export function HowTo({ idx, onClose }: { idx: Index; onClose: () => void }) {
             <span className="legend-tiers" aria-hidden><i className="t-blockbuster" /><i className="t-hit" /><i className="t-flop" /><i className="t-disaster" /></span>
             Shortest chain = Blockbuster. Each extra link drops a tier: Hit, Flop, Disaster
           </li>
-          <li><span aria-hidden><Icon name="flame" size={16} /></span> <b>Hard mode</b>: no hints, no signal bars</li>
+          <li><span aria-hidden><Icon name="flame" size={16} /></span> <b>Hard mode</b>: picked before your first move; no hints, no signal bars, no rings</li>
         </ul>
       </details>
     </Modal>
