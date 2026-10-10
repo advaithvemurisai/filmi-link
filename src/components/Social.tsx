@@ -81,7 +81,7 @@ export function AccountSheet({
         </button>
       </form>
       <p className="fine">
-        New name? We’ll create it. Used it before? Enter your PIN. Your results on this device come with you.
+        New name? We’ll create it. Used it before? Enter your PIN. Your finished puzzles come with you to every device; one you’re partway through stays here.
       </p>
     </Modal>
   )

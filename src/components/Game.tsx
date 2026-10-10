@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { creditOk, isValidChain, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role, type Rule } from '../lib/graph'
+import { creditOk, isValidChain, knownFor, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role, type Rule } from '../lib/graph'
 import { RULES, difficultyOf, localDateKey, msToMidnight, ruleOf, type PuzzleDef } from '../lib/daily'
-import { IMG, clock } from '../lib/format'
+import { IMG, clock, langName } from '../lib/format'
 import { MAX_SECONDS, collectCast, isRareRoute, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bits'
 import { ROLE_ICON, launchFrom } from './bit-helpers'
@@ -402,6 +402,17 @@ export default function Game(props: Props) {
 /** Only mention the "/" shortcut where there's a keyboard to press it on. */
 const KEYBOARD = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches
 
+/** "Known for <film>" under a name another person shares, so two Rekhas can be told apart. */
+function KnownFor({ idx, id }: { idx: Index; id: string }) {
+  const f = knownFor(idx, id)
+  return f ? <span className="card-known" title={`Known for ${idx.data.films[f].t}`}>{idx.data.films[f].t}</span> : null
+}
+
+/** The language after a title another film shares (Baby · Hindi vs Baby · Tamil). */
+function TitleLang({ l }: { l: string }) {
+  return <span className="title-lang"> · {langName(l)}</span>
+}
+
 /** Distinct films a person can link through under the day's rule. */
 function usableFilms(idx: Index, rule: Rule | null, personId: string) {
   return new Set((idx.personFilms[personId] ?? []).filter((c) => creditOk(idx, rule, personId, c.role)).map((c) => c.id)).size
@@ -451,6 +462,7 @@ function PersonCard({
         <CardFlag win={win} used={used} hint={hint} />
       </span>
       <span className="card-name">{name}</span>
+      {idx.sharedName.has(id) && <KnownFor idx={idx} id={id} />}
       {!hard && <Reach n={others} />}
       <span className="sr-only">{detail}{win ? ', also worked on the target' : ''}{hint ? ', hint' : ''}</span>
     </button>
@@ -477,7 +489,7 @@ function FilmCard({
         <span className="card-role" aria-hidden><Icon name={ROLE_ICON[role]} size={12} /></span>
         <CardFlag win={target} used={used && !target} hint={hint} />
       </span>
-      <span className="card-name">{f.t}</span>
+      <span className="card-name">{f.t}{idx.sharedTitle.has(id) && <TitleLang l={f.l} />}</span>
       <span className="sr-only">{target ? 'the target' : ''}{hint ? ', hint' : ''}</span>
     </button>
   )
@@ -541,6 +553,7 @@ function TargetPanel({
                 {live && <span className="card-flag is-win" aria-hidden><Icon name="target" size={10} /></span>}
               </span>
               <span className="face-name">{idx.data.people[c.id].n}</span>
+              {idx.sharedName.has(c.id) && <KnownFor idx={idx} id={c.id} />}
             </>
           )
           return live ? (

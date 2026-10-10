@@ -171,7 +171,7 @@ export function Filmstrip({
             <span className="frame-art">
               {n.kind === 'film' ? <Poster idx={idx} id={n.id} size="sm" /> : <Avatar idx={idx} id={n.id} size="sm" />}
             </span>
-            <span className="frame-label">{nodeLabel(idx, n)}</span>
+            <span className="frame-label">{nodeLabel(idx, n)}{n.kind === 'film' && idx.sharedTitle.has(n.id) ? ` (${langName(idx.data.films[n.id].l)})` : ''}</span>
           </div>
         </li>
       ))}

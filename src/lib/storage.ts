@@ -41,7 +41,14 @@ const write = (k: string, v: unknown) => {
 
 const resultsKey = (track: Track) => (track === 'all' ? 'fl:results' : `fl:results:${track}`)
 export const loadResults = (track: Track = 'all') => read<Record<string, Result>>(resultsKey(track), {})
-export const saveResults = (all: Record<string, Result>, track: Track = 'all') => write(resultsKey(track), all)
+/**
+ * Save a track's results. Days already on disk but missing from `all` are kept: another tab may have
+ * finished a puzzle since this one loaded, and a stale copy must never erase it.
+ */
+export const saveResults = (all: Record<string, Result>, track: Track = 'all') =>
+  write(resultsKey(track), { ...loadResults(track), ...all })
+/** True if a storage key holds some track's results (for syncing open tabs). */
+export const isResultsKey = (k: string | null) => !!k && (k === 'fl:results' || k.startsWith('fl:results:'))
 
 /** Every home-cinema language's saved results on this device, for syncing. */
 export function loadAllHomeResults(langs: readonly string[]) {

@@ -21,6 +21,17 @@ export interface Index {
   personFilms: Record<string, Credit[]>
   /** Distinct films per person (the generator's "degree", used by the No Superstars cut). */
   degree: Record<string, number>
+  /** Films whose title another film shares (e.g. Baby in Hindi and in Tamil): show their language. */
+  sharedTitle: Set<string>
+  /** People whose name another person shares (two Rekhas): show what they're known for. */
+  sharedName: Set<string>
+}
+
+/** A person's best-known film (most votes), to tell namesakes apart. */
+export function knownFor(idx: Index, personId: string): string | null {
+  let best: string | null = null
+  for (const c of idx.personFilms[personId] ?? []) if (!best || idx.data.films[c.id].pop > idx.data.films[best].pop) best = c.id
+  return best
 }
 
 /**
@@ -50,7 +61,19 @@ export function buildIndex(data: GraphData): Index {
   }
   const degree: Record<string, number> = {}
   for (const [pid, credits] of Object.entries(personFilms)) degree[pid] = new Set(credits.map((c) => c.id)).size
-  return { data, filmCredits, personFilms, degree }
+  const shared = <T,>(items: [string, T][], label: (v: T) => string) => {
+    const seen = new Map<string, string[]>()
+    for (const [id, v] of items) {
+      const k = label(v).trim().toLowerCase()
+      seen.set(k, [...(seen.get(k) ?? []), id])
+    }
+    return new Set([...seen.values()].filter((ids) => ids.length > 1).flat())
+  }
+  return {
+    data, filmCredits, personFilms, degree,
+    sharedTitle: shared(Object.entries(data.films), (f) => f.t),
+    sharedName: shared(Object.entries(data.people), (p) => p.n),
+  }
 }
 
 const key = (n: Node) => `${n.kind[0]}:${n.id}`

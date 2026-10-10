@@ -135,7 +135,8 @@ export function Stats({
       </section>
       <Reminders />
       <p className="fine">
-        Streaks count daily puzzles solved on their own day. {synced ? 'The India daily is synced to your player.' : 'Stored in this browser only.'}
+        Streaks count daily puzzles solved on their own day.{' '}
+        {synced ? 'Finished dailies sync to your player; a puzzle you’re partway through stays on this device.' : 'Stored in this browser only.'}
       </p>
     </Modal>
   )

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { buildIndex, canUse, isValidChain, linkCount, randomPuzzle, shortestPath, startFaces, type GraphData, type Node } from './graph'
 import { freeFromLink, parseFreeLink, validChallenge, validResults } from './results'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from './daily'
-import { collectCast, computeStats, loadCast, loadProgress, loadResults, ratingFor, type Result } from './storage'
+import { collectCast, computeStats, loadCast, loadProgress, loadResults, ratingFor, saveResults, type Result } from './storage'
 
 // Tiny graph: A —p1— B —p2— C,  D isolated.
 const tiny: GraphData = {
@@ -263,5 +263,11 @@ describe('corrupted storage (QA C5)', () => {
     store['fl:results'] = '{oops'; expect(loadResults()).toEqual({})
     store['fl:progress:2026-09-30'] = '{"path":"nope"}'; expect(loadProgress('2026-09-30')).toBeNull()
     expect(() => collectCast([{ kind: 'person', id: 'p1' }], '2026-09-30')).not.toThrow()
+  })
+  it('a stale tab saving its results never erases a day another tab saved', () => {
+    const r = (links: number) => ({ links, par: 2, seconds: 30, hints: 0, gaveUp: false, live: true, path: [] }) as Result
+    saveResults({ '2026-10-08': r(2) })                       // tab A finishes Thursday
+    saveResults({ '2026-10-07': r(3), '2026-10-09': r(2) })   // tab B, loaded before that, saves Friday
+    expect(Object.keys(loadResults()).sort()).toEqual(['2026-10-07', '2026-10-08', '2026-10-09'])
   })
 })

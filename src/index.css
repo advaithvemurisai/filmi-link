@@ -24,6 +24,7 @@
 
   /* Box-office tiers */
   --t-blockbuster: #e2b33c;
+  --ribbon: #e2b33c;          /* theme ribbon fill, under dark text */
   --t-hit: #4caf7d;
   --t-flop: #d98a3a;
   --t-disaster: #8a8790;
@@ -58,9 +59,11 @@
     --accent-soft: rgba(184, 34, 42, 0.1);
     --hint: #2a6fb3;
     --danger: #b8222a;
-    --t-blockbuster: #b8860b;
-    --t-hit: #2f8a5c;
-    --t-flop: #c06a1c;
+    /* Darker in light mode so tier text and grade chips pass 4.5:1 on every surface */
+    --t-blockbuster: #7d5a06;
+    --ribbon: #b8860b;
+    --t-hit: #23704a;
+    --t-flop: #9a4f12;
     --t-disaster: #6f6b76;
     --shadow: 0 8px 24px rgba(60, 40, 20, 0.12);
     color-scheme: light;
@@ -227,7 +230,7 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .grade.is-hard { color: var(--accent-text); }
 .theme-ribbon {
   display: inline-block; font-family: var(--display); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; font-weight: 500;
-  padding: 3px 18px 3px 10px; background: var(--t-blockbuster); color: #1b1815;
+  padding: 3px 18px 3px 10px; background: var(--ribbon); color: #1b1815;
   clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 50%, 100% 100%, 0 100%);
 }
 .film-end { display: flex; gap: 14px; align-items: center; min-width: 0; }
@@ -366,6 +369,8 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .card:hover { background: var(--surface-2); }
 .card:active { transform: scale(.97); }
 .card-art { position: relative; display: block; }
+.card-known { font-size: 11.5px; color: var(--muted); line-height: 1.2; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title-lang { font-weight: 500; color: var(--muted); }
 .card-name { font-size: 12.5px; font-weight: 600; line-height: 1.25; width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card-role {
   position: absolute; right: -4px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
@@ -852,6 +857,15 @@ div.face .avatar { opacity: .85; }
   .bill-faces button { width: 80px; }
   .bill-faces .avatar-lg { width: 60px; height: 60px; }
   .dist-row { grid-template-columns: 76px 1fr 24px; }
+  /* Readable names on phones: nothing a player must read is under 12px. */
+  .face-name { font-size: 13px; }
+  .face-wall { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .card-name { font-size: 13.5px; }
+  .frame-label { font-size: 12.5px; }
+  .nav-btn { font-size: 12px; }
+  .lang-tag { font-size: 12.5px; }
+  .card-year, .grade { font-size: 12px; }
+  .card-known { font-size: 12px; }
 }
 /* Short landscape phones: shrink the double bill so the first move is still near the top. */
 @media (max-height: 520px) and (orientation: landscape) {

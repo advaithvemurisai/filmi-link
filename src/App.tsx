@@ -8,7 +8,7 @@ import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type
 import { addDays, localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import { HOME_LANGS, langName } from './lib/format'
 import {
-  bestByDay, computeStats, hasPlayed, loadAllHomeResults, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
+  bestByDay, computeStats, hasPlayed, isResultsKey, loadAllHomeResults, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
   saveSettings,
   type Result, type Track,
 } from './lib/storage'
@@ -109,6 +109,17 @@ export default function App() {
   const [routeShare, setRouteShare] = useState<{ count: number; total: number } | null>(null)
 
   useEffect(() => recordVisit(today), [today])
+
+  // Another tab finished a puzzle: adopt its results here too, so this tab neither replays nor overwrites it.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (!isResultsKey(e.key) || !idx || !file) return
+      setResults(validResults(idx, file, loadResults()))
+      if (homeLang && homeFile) setHomeResults(validResults(idx, homeFile, loadResults(homeLang)))
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [idx, file, homeLang, homeFile])
 
   // Follow the clock: a tab left open past midnight should move on to the new day's puzzle.
   useEffect(() => {
