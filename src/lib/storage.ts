@@ -43,6 +43,16 @@ const resultsKey = (track: Track) => (track === 'all' ? 'fl:results' : `fl:resul
 export const loadResults = (track: Track = 'all') => read<Record<string, Result>>(resultsKey(track), {})
 export const saveResults = (all: Record<string, Result>, track: Track = 'all') => write(resultsKey(track), all)
 
+/** Every home-cinema language's saved results on this device, for syncing. */
+export function loadAllHomeResults(langs: readonly string[]) {
+  const out: Record<string, Record<string, Result>> = {}
+  for (const l of langs) {
+    const r = loadResults(l)
+    if (Object.keys(r).length) out[l] = r
+  }
+  return out
+}
+
 const progressKey = (track: Track, dateKey: string) =>
   track === 'all' ? `fl:progress:${dateKey}` : `fl:progress:${track}:${dateKey}`
 export const loadProgress = (dateKey: string, track: Track = 'all') => {

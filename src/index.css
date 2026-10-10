@@ -120,6 +120,7 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .switch input { position: absolute; opacity: 0; pointer-events: none; }
 .switch-track { width: 30px; height: 18px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); position: relative; transition: background .15s; }
 .switch-track i { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.switch.is-locked { opacity: .55; cursor: not-allowed; }
 .switch.on { color: var(--text); font-weight: 600; }
 .switch.on .switch-track { background: var(--accent); border-color: var(--accent); }
 .switch.on .switch-track i { transform: translateX(12px); background: #fff; }
@@ -748,20 +749,20 @@ div.face .avatar { opacity: .85; }
 .credit-scripts { display: flex; gap: 6px; margin-top: 6px; }
 .credit-scripts i { font-style: normal; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); font-size: 14px; }
 /* The closing CTA: a cinema ticket with a perforated stub. */
-.ticket {
+.door-ticket {
   display: flex; align-items: stretch; margin-top: 4px; border: 0; padding: 0; background: none; color: var(--accent-ink);
   filter: drop-shadow(0 6px 16px rgba(0,0,0,.3)); transition: transform .15s;
 }
-.ticket:hover { transform: translateY(-2px) rotate(-1deg); }
-.ticket:active { transform: scale(.98); }
-.ticket-main, .ticket-stub-end { background: var(--accent); display: grid; align-content: center; }
-.ticket-main {
+.door-ticket:hover { transform: translateY(-2px) rotate(-1deg); }
+.door-ticket:active { transform: scale(.98); }
+.door-ticket-main, .door-ticket-stub { background: var(--accent); display: grid; align-content: center; }
+.door-ticket-main {
   padding: 12px 22px 12px 26px; gap: 2px; text-align: left; border-radius: 8px 0 0 8px;
   -webkit-mask: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px); mask: radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px);
 }
-.ticket-main small { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; opacity: .8; }
-.ticket-main b { font-family: var(--display); font-weight: 500; font-size: 21px; letter-spacing: .03em; text-transform: uppercase; }
-.ticket-stub-end {
+.door-ticket-main small { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; opacity: .8; }
+.door-ticket-main b { font-family: var(--display); font-weight: 500; font-size: 21px; letter-spacing: .03em; text-transform: uppercase; }
+.door-ticket-stub {
   padding: 0 18px; place-items: center; border-radius: 0 8px 8px 0;
   border-left: 2px dashed rgba(255,255,255,.45);
   -webkit-mask: radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px); mask: radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px);
@@ -841,6 +842,22 @@ div.face .avatar { opacity: .85; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
 }
+
+/* Touch screens: every control gets a thumb-sized target (44px is the usual floor). */
+@media (pointer: coarse) {
+  .icon-btn { width: 44px; height: 44px; }
+  .nav-btn { min-height: 44px; padding: 7px 12px; }
+  .tool { min-height: 44px; }
+  .tracks button, .segmented button, .free-bar button { min-height: 40px; }
+  .switch { min-height: 44px; }
+  .player-pill { min-height: 44px; }
+  .card { min-height: 44px; }
+}
+
+/* A Blockbuster earns a slow gold glow on its stamp and frame. */
+.result.is-gold { box-shadow: 0 0 0 1px color-mix(in srgb, var(--t-blockbuster) 40%, transparent), 0 0 40px color-mix(in srgb, var(--t-blockbuster) 18%, transparent); }
+.result.is-gold .verdict .stamp { animation: stamp-in .45s cubic-bezier(.3,1.4,.5,1) both, glow 2.8s ease-in-out .6s infinite alternate; }
+@keyframes glow { to { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--t-blockbuster) 70%, transparent)); } }
 
 /* ---------- friend's chain ---------- */
 .vs { display: grid; gap: 6px; }

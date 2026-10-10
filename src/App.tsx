@@ -6,14 +6,14 @@ import { Archive, HomePicker, HowTo, Stats } from './components/Modals'
 import { AccountSheet, FriendsSheet } from './components/Social'
 import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type Index, type Node } from './lib/graph'
 import { addDays, localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
-import { langName } from './lib/format'
+import { HOME_LANGS, langName } from './lib/format'
 import {
-  computeStats, hasPlayed, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
+  computeStats, hasPlayed, loadAllHomeResults, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
   saveSettings,
   type Result, type Track,
 } from './lib/storage'
 import { reportPlayed } from './lib/push'
-import { fetchRouteShare, loadAccount, saveAccount, sync, SyncError, type Account } from './lib/account'
+import { fetchRouteShare, loadAccount, saveAccount, sync, SyncError, type Account, type HomeResults } from './lib/account'
 import { freeFromLink, parseFreeLink, validChallenge, validResults, type Friend } from './lib/results'
 
 type Mode = { kind: 'daily'; date: string; track: Track } | { kind: 'free'; puzzle: PuzzleDef; n: number; friend?: Friend }
@@ -27,10 +27,12 @@ const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsW
  * A friend's share link carries their score and the people/films between the endpoints:
  * `?c=<puzzle no>-<links>.<id>.<id>…`. The ids are optional (older links have none).
  */
-export interface Challenge { no: number; links: number; mids: string[] }
+export interface Challenge { lang: string | null; no: number; links: number; mids: string[] }
 function parseChallenge(): Challenge | null {
-  const m = /^(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,23})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
-  return m ? { no: Number(m[1]), links: Number(m[2]), mids: m[3] ? m[3].slice(1).split('.') : [] } : null
+  // An optional leading language (`te.39-2…`) points at a home-cinema daily instead of the India one.
+  const m = /^(?:([a-z]{2})\.)?(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,23})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
+  if (!m || (m[1] && !HOME_LANGS.includes(m[1]))) return null
+  return { lang: m[1] ?? null, no: Number(m[2]), links: Number(m[3]), mids: m[4] ? m[4].slice(1).split('.') : [] }
 }
 // Read once at load, before the returning-player redirect rewrites the URL.
 const CHALLENGE = parseChallenge()
@@ -50,7 +52,8 @@ const flag = (k: string, v?: boolean) => {
 function initialRoute(): Route {
   const r = routeFromPath()
   // A shared random chain skips the landing page, which is about today's daily.
-  if (r === 'landing' && (hasPlayed() || FREE_LINK)) {
+  // A home-cinema challenge also skips it, since the landing page shows the India daily.
+  if (r === 'landing' && (hasPlayed() || FREE_LINK || CHALLENGE?.lang)) {
     history.replaceState(null, '', `${BASE}play${location.search}`)
     return 'play'
   }
@@ -81,12 +84,16 @@ export default function App() {
   const [sheet, setSheet] = useState<Sheet>(null)
   const [results, setResults] = useState<Record<string, Result>>(() => loadResults())
   const [settings, setSettings] = useState(loadSettings)
-  const [homeResults, setHomeResults] = useState<Record<string, Result>>(() => (settings.home ? loadResults(settings.home) : {}))
+  // A home-cinema challenge link opens that language for this visit without changing the saved setting.
+  const [homeLang, setHomeLang] = useState<string | undefined>(() => CHALLENGE?.lang ?? settings.home)
+  const [homeResults, setHomeResults] = useState<Record<string, Result>>(() => (homeLang ? loadResults(homeLang) : {}))
   const [route, setRoute] = useState<Route>(initialRoute)
   const [coach, setCoach] = useState(() => flag('fl:coach'))
   const [account, setAccount] = useState<Account | null>(loadAccount)
   const [welcome, setWelcome] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState(0)
+  /** Hard mode locks once a puzzle has its first pick, so aids can't be toggled mid-game. */
+  const [underway, setUnderway] = useState(false)
   const [routeShare, setRouteShare] = useState<{ count: number; total: number } | null>(null)
 
   // Follow the clock: a tab left open past midnight should move on to the new day's puzzle.
@@ -138,26 +145,55 @@ export default function App() {
   useEffect(() => {
     setHomeFile(null)
     setHomeFailed(false)
-    if (!settings.home || !idx) return
-    const home = settings.home
+    if (!homeLang || !idx) return
+    const home = homeLang
     fetchJSON<PuzzleFile>(`puzzles-${home}.json`)
       .then((p) => {
         setHomeFile(p)
         setHomeResults(validResults(idx, p, loadResults(home)))
       })
       .catch(() => { setHomeFile(null); setHomeFailed(true) })
-  }, [settings.home, idx])
+  }, [homeLang, idx])
+
+  /**
+   * Take home-cinema results back from the server. The language on screen updates now; the others wait
+   * in storage until their schedule loads. A device with no home cinema adopts the one just synced.
+   */
+  const adoptHome = useCallback(
+    (home: HomeResults) => {
+      if (!idx) return
+      let newest = ''
+      let newestLang: string | undefined
+      for (const [lang, remote] of Object.entries(home)) {
+        if (!HOME_LANGS.includes(lang)) continue
+        const merged = { ...loadResults(lang), ...remote }
+        saveResults(merged, lang)
+        if (lang === homeLang && homeFile) setHomeResults(validResults(idx, homeFile, merged))
+        const last = Object.keys(merged).sort().pop() ?? ''
+        if (last > newest) { newest = last; newestLang = lang }
+      }
+      if (!homeLang && newestLang) {
+        const next = { ...loadSettings(), home: newestLang }
+        saveSettings(next)
+        setSettings(next)
+        setHomeLang(newestLang)
+        setHomeResults(loadResults(newestLang))
+      }
+    },
+    [idx, homeLang, homeFile],
+  )
 
   /** Push local results up and adopt the merged set (server keeps the first result per day). */
   const pushResults = useCallback(
     (local: Record<string, Result>) => {
       if (!account || !idx || !file) return
       const cleanLocal = validResults(idx, file, local)
-      sync(account, cleanLocal)
+      sync(account, cleanLocal, loadAllHomeResults(HOME_LANGS))
         .then((r) => {
           const merged = validResults(idx, file, { ...cleanLocal, ...r.results })
           saveResults(merged)
           setResults((prev) => validResults(idx, file, { ...prev, ...merged }))
+          adoptHome(r.home ?? {})
           setSyncedAt(Date.now())
         })
         .catch((e) => {
@@ -167,7 +203,7 @@ export default function App() {
           }
         })
     },
-    [account, idx, file],
+    [account, idx, file, adoptHome],
   )
 
   // Sync once the data is in, so another device's results show up here.
@@ -212,11 +248,13 @@ export default function App() {
   // The newest India daily played on its own day, so a subscribed browser isn't reminded after playing.
   const lastPlayed = Object.keys(results).reduce((m, d) => (results[d].live && d > m ? d : m), '')
   useEffect(() => reportPlayed({ last: lastPlayed, streak }), [lastPlayed, streak])
-  // A challenge points at one India daily, today's or an earlier one; the friend's chain is rebuilt from the graph.
+  // A challenge points at one daily (India's or a home cinema's), today's or an earlier one; the friend's chain is rebuilt from the graph.
   const challenge = (() => {
     if (!CHALLENGE || !file) return null
-    const date = addDays(file.epoch, CHALLENGE.no - 1)
-    const pz = date <= today ? puzzleFor(file, date) : null
+    const cFile = CHALLENGE.lang ? (homeLang === CHALLENGE.lang ? homeFile : null) : file
+    if (!cFile) return null
+    const date = addDays(cFile.epoch, CHALLENGE.no - 1)
+    const pz = date <= today ? puzzleFor(cFile, date) : null
     if (!pz || !validChallenge(CHALLENGE.links, pz.par)) return null
     let path: Node[] | null = null
     if (idx && CHALLENGE.mids.length === CHALLENGE.links * 2 - 1) {
@@ -227,15 +265,15 @@ export default function App() {
       ]
       if (isValidChain(idx, full, pz.s, pz.e) && linkCount(full) === CHALLENGE.links) path = full
     }
-    return { date, links: CHALLENGE.links, path }
+    return { date, links: CHALLENGE.links, path, track: (CHALLENGE.lang ?? 'all') as Track }
   })()
   const playDate = challenge?.date ?? today
 
   // Arriving from a link to an earlier puzzle: open that one instead of today's.
   useEffect(() => {
-    if (challenge && challenge.date !== today) setMode({ kind: 'daily', date: challenge.date, track: 'all' })
+    if (challenge && (challenge.date !== today || challenge.track !== 'all')) setMode({ kind: 'daily', date: challenge.date, track: challenge.track })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!file])
+  }, [!!challenge])
 
   /** Start today's daily from the landing page with a first person already picked. */
   const startFrom = (personId: string) => {
@@ -259,7 +297,7 @@ export default function App() {
         idx={idx}
         file={file}
         today={playDate}
-        challenge={challenge}
+        challenge={challenge?.track === 'all' ? challenge : null}
         onStartFrom={startFrom}
         onWalkthroughDone={() => { flag('fl:seen', true); setMode({ kind: 'daily', date: playDate, track: 'all' }); navigate('play') }}
         onPlayDaily={() => { setMode({ kind: 'daily', date: playDate, track: 'all' }); navigate('play') }}
@@ -270,7 +308,7 @@ export default function App() {
   if (error) return <div className="splash">{error}</div>
   if (!idx || !file) return <div className="splash"><span className="reel" /> Loading reels…</div>
 
-  const home = settings.home
+  const home = homeLang
   const track: Track = mode.kind === 'daily' && mode.track !== 'all' && homeFile ? mode.track : 'all'
   const activeFile = track === 'all' ? file : homeFile!
   const activeResults = track === 'all' ? results : homeResults
@@ -291,10 +329,14 @@ export default function App() {
     if (track === 'all') {
       setResults(next)
       pushResults(next)
-    } else setHomeResults(next)
+    } else {
+      setHomeResults(next)
+      pushResults(results)
+    }
   }
 
-  const friendHere = mode.kind === 'daily' && track === 'all' && !!challenge && mode.date === challenge.date
+  const modeLocked = underway || (mode.kind === 'daily' && !!activeResults[mode.date])
+  const friendHere = mode.kind === 'daily' && !!challenge && track === challenge.track && mode.date === challenge.date
   const friend = mode.kind === 'free' ? mode.friend ?? null : friendHere ? challenge : null
   const isDaily = (t: Track) => mode.kind === 'daily' && mode.date === today && track === t
   const openDaily = (t: Track) => setMode({ kind: 'daily', date: today, track: t })
@@ -312,8 +354,9 @@ export default function App() {
           <NavBtn icon="stats" label="Stats" onClick={() => setSheet('stats')} />
           <NavBtn icon="trophy" label="Friends" onClick={() => setSheet('friends')} />
           <button className="icon-btn" onClick={() => setSheet('how')} aria-label="How to play"><Icon name="help" size={17} /></button>
-          <label className={`switch ${settings.hard ? 'on' : ''}`} title="Hard mode: no hints, no signal bars">
-            <input type="checkbox" checked={settings.hard} onChange={() => updateSettings({ ...settings, hard: !settings.hard })} />
+          <label className={`switch ${settings.hard ? 'on' : ''} ${modeLocked ? 'is-locked' : ''}`}
+            title={modeLocked ? 'Hard mode is locked once a puzzle is under way' : 'Hard mode: no hints, no signal bars'}>
+            <input type="checkbox" checked={settings.hard} disabled={modeLocked} onChange={() => updateSettings({ ...settings, hard: !settings.hard })} />
             <span className="switch-track" aria-hidden><i /></span>
             <span>Hard</span>
           </label>
@@ -373,7 +416,8 @@ export default function App() {
           hard={settings.hard}
           shareTitle={shareTitle}
           isToday={mode.kind === 'daily' && mode.date === today}
-          dailyNo={mode.kind === 'daily' && track === 'all' ? dailyNo : null}
+          dailyNo={mode.kind === 'daily' ? dailyNo : null}
+          shareLang={track === 'all' ? null : track}
           free={mode.kind === 'free'}
           challenge={friend?.links ?? null}
           friendPath={friend?.path ?? null}
@@ -381,7 +425,10 @@ export default function App() {
           routeShare={mode.kind === 'daily' && mode.date === today && track === 'all' ? routeShare : null}
           initialResult={mode.kind === 'daily' ? activeResults[mode.date] ?? null : null}
           initialProgress={mode.kind === 'daily' ? validProgress(idx, mode.date, puzzle.s, track) : null}
-          onProgress={(p) => mode.kind === 'daily' && saveProgress(mode.date, p, track)}
+          onProgress={(p) => {
+            setUnderway(p.path.length > 1)
+            if (mode.kind === 'daily') saveProgress(mode.date, p, track)
+          }}
           onFinish={(r) => {
             if (coach) {
               flag('fl:coach', false)
@@ -420,6 +467,7 @@ export default function App() {
           home={home} onClose={() => setSheet(null)}
           onPick={(l) => {
             updateSettings({ ...settings, home: l })
+            setHomeLang(l)
             setHomeResults(l ? loadResults(l) : {})
             setMode({ kind: 'daily', date: today, track: l ?? 'all' })
             setSheet(null)
@@ -429,12 +477,13 @@ export default function App() {
       {sheet === 'account' && (
         <AccountSheet
           account={account} results={results} streak={streak} onClose={() => setSheet(null)}
-          onSignedIn={(a, merged, created) => {
+          onSignedIn={(a, merged, home, created) => {
             saveAccount(a)
             setAccount(a)
             const all = validResults(idx, file, { ...results, ...merged })
             saveResults(all)
             setResults(all)
+            adoptHome(home)
             setSheet(null)
             setWelcome(created ? `Welcome, ${a.name}. Your streak is saved.` : `Welcome back, ${a.name}`)
           }}

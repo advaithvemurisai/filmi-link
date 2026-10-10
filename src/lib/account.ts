@@ -2,7 +2,9 @@ import type { Result, Score } from './storage'
 
 /** A signed-in player on this device. The PIN is never stored; the server's token stands in for it. */
 export interface Account { name: string; token: string }
-export interface Friend { name: string; results: Record<string, Score & Pick<Result, 'seconds' | 'hints'>> }
+type FriendScores = Record<string, Score & Pick<Result, 'seconds' | 'hints'>>
+/** A friend's scores for the India daily plus any home-cinema dailies, never their chains. */
+export interface Friend { name: string; results: FriendScores; home?: Record<string, FriendScores> }
 
 const KEY = 'fl:account'
 
@@ -42,11 +44,14 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
   return json as T
 }
 
-export const login = (name: string, pin: string, results: Record<string, Result>) =>
-  call<{ name: string; token: string; results: Record<string, Result>; created: boolean }>({ action: 'login', name, pin, results })
+/** Home-cinema results by language code, synced alongside the India daily's. */
+export type HomeResults = Record<string, Record<string, Result>>
 
-export const sync = (a: Account, results: Record<string, Result>) =>
-  call<{ results: Record<string, Result> }>({ action: 'sync', ...a, results })
+export const login = (name: string, pin: string, results: Record<string, Result>, home: HomeResults) =>
+  call<{ name: string; token: string; results: Record<string, Result>; home: HomeResults; created: boolean }>({ action: 'login', name, pin, results, home })
+
+export const sync = (a: Account, results: Record<string, Result>, home: HomeResults) =>
+  call<{ results: Record<string, Result>; home: HomeResults }>({ action: 'sync', ...a, results, home })
 
 export const fetchFriends = (a: Account) => call<{ players: Friend[] }>({ action: 'board', ...a })
 

@@ -145,12 +145,12 @@ export default function Landing({ idx, file, today, challenge, onStartFrom, onWa
         <Credits />
         <p className="credits-fin">and a new show every midnight</p>
         {/* The closing call to action is the ticket you hand over at the door. */}
-        <button className="ticket" onClick={onPlayDaily}>
-          <span className="ticket-main">
+        <button className="door-ticket" onClick={onPlayDaily}>
+          <span className="door-ticket-main">
             <small>Admit one</small>
             <b>Today’s show{puzzleNo ? `, No. ${puzzleNo}` : ''}</b>
           </span>
-          <span className="ticket-stub-end"><Icon name="play" size={18} /></span>
+          <span className="door-ticket-stub"><Icon name="play" size={18} /></span>
         </button>
       </section>
 

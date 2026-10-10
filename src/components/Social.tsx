@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Icon, Modal, PlayerBadge, Stamp } from './Bits'
-import { fetchFriends, login, SyncError, type Account, type Friend } from '../lib/account'
+import { fetchFriends, login, SyncError, type Account, type Friend, type HomeResults } from '../lib/account'
 import { addDays } from '../lib/daily'
-import { clock } from '../lib/format'
-import { computeStats, rate, scoreFor, tierClass, type Result } from '../lib/storage'
+import { HOME_LANGS, clock, langName } from '../lib/format'
+import { computeStats, loadAllHomeResults, rate, scoreFor, tierClass, type Result } from '../lib/storage'
 
 /** Name + 4-digit PIN. A new name creates a player; an existing name needs its PIN. */
 export function AccountSheet({
@@ -12,7 +12,7 @@ export function AccountSheet({
   account: Account | null
   results: Record<string, Result>
   streak: number
-  onSignedIn: (a: Account, merged: Record<string, Result>, created: boolean) => void
+  onSignedIn: (a: Account, merged: Record<string, Result>, home: HomeResults, created: boolean) => void
   onSignOut: () => void
   onClose: () => void
 }) {
@@ -27,8 +27,8 @@ export function AccountSheet({
     setBusy(true)
     setError(null)
     try {
-      const r = await login(name.trim(), pin, results)
-      onSignedIn({ name: r.name, token: r.token }, r.results, r.created)
+      const r = await login(name.trim(), pin, results, loadAllHomeResults(HOME_LANGS))
+      onSignedIn({ name: r.name, token: r.token }, r.results, r.home ?? {}, r.created)
     } catch (err) {
       setError(err instanceof SyncError ? err.message : 'Something went wrong.')
       setPin('')
@@ -87,7 +87,9 @@ export function AccountSheet({
   )
 }
 
-/** Friends ranked by today's score, with streaks alongside. Chains stay hidden so nothing is spoiled. */
+type DayScore = Friend['results'][string]
+
+/** Friends ranked by today's score across all their dailies, with streaks alongside. Chains stay hidden so nothing is spoiled. */
 export function FriendsSheet({
   account, today, onClose, onSignIn,
 }: {
@@ -111,7 +113,7 @@ export function FriendsSheet({
       <Modal title="Friends" onClose={onClose}>
         <div className="empty-state">
           <Icon name="trophy" size={40} />
-          <p>Pick a name to see everyone’s streaks and today’s scores.</p>
+          <p>Pick a name to see everyone’s streaks and today’s scores across all dailies.</p>
           <button className="btn primary" onClick={onSignIn}>Pick a name</button>
         </div>
       </Modal>
@@ -119,11 +121,23 @@ export function FriendsSheet({
   }
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6))
-  // Today's score decides the order (played today first); streak, then speed, break ties.
+  // Every daily counts, not just India's: today's points add up across the dailies someone finished,
+  // and a day keeps the streak alive if any of them was won on its own day. Played today first, then
+  // points, streak and speed break ties.
   const rows = (players ?? [])
     .map((p) => {
-      const todays = p.results[today]
-      return { ...p, stats: computeStats(p.results, today), todays, pts: todays && !todays.gaveUp ? scoreFor(todays).total : null }
+      const sets: [string, Record<string, DayScore>][] = [['India', p.results], ...Object.entries(p.home ?? {}).map(([l, r]): [string, Record<string, DayScore>] => [langName(l), r])]
+      const todaysAll = sets.flatMap(([label, r]) => (r[today] ? [{ label, r: r[today] }] : []))
+      const best = (day: string) => {
+        const all = sets.flatMap(([, r]) => (r[day] ? [r[day]] : []))
+        return all.sort((a, b) => Number(b.live && !b.gaveUp) - Number(a.live && !a.gaveUp) || scoreFor(b).total - scoreFor(a).total)[0]
+      }
+      const days = new Set(sets.flatMap(([, r]) => Object.keys(r)))
+      const merged: Record<string, DayScore> = {}
+      for (const d of days) merged[d] = best(d)
+      const todays = merged[today]
+      const pts = todaysAll.length ? todaysAll.reduce((n, { r }) => n + (r.gaveUp ? 0 : scoreFor(r).total), 0) : null
+      return { ...p, merged, stats: computeStats(merged, today), todays, todaysAll, pts }
     })
     .sort((a, b) =>
       Number(b.todays !== undefined) - Number(a.todays !== undefined) ||
@@ -150,15 +164,17 @@ export function FriendsSheet({
                 <span className="friend-main">
                   <b>{p.name}{me && <em> · you</em>}</b>
                   <span className="friend-week" aria-label="Last 7 days">
-                    {week.map((d) => <i key={d} className={tierClass(p.results[d])} title={d} />)}
+                    {week.map((d) => <i key={d} className={tierClass(p.merged[d])} title={d} />)}
                   </span>
                 </span>
-                <span className="friend-today" title="Today">
+                <span className="friend-today" title="Today, across all dailies">
                   {!t ? <span className="muted">not yet</span>
                     : <>
                       <span className="friend-pts"><b>{p.pts ?? 0}</b> pts</span>
                       <Stamp rating={rate(t) ?? 'Shelved'} small />
-                      <small>{t.links} link{t.links === 1 ? '' : 's'} · {clock(t.seconds)}{t.hints ? ` · 💡${t.hints}` : ''}</small>
+                      {p.todaysAll.length > 1
+                        ? <small title="Points from each daily finished today">{p.todaysAll.map(({ label, r }) => `${label} ${r.gaveUp ? 0 : scoreFor(r).total}`).join(' + ')}</small>
+                        : <small>{t.links} link{t.links === 1 ? '' : 's'} · {clock(t.seconds)}{t.hints ? ` · 💡${t.hints}` : ''}</small>}
                     </>}
                 </span>
                 <span className={`friend-streak ${p.stats.streak ? '' : 'is-cold'}`} title="Current streak"><Icon name="flame" size={15} />{p.stats.streak}</span>

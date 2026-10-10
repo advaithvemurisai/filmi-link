@@ -111,6 +111,8 @@ interface Player {
   token: string
   created: string
   results: Record<string, Entry>
+  /** Home-cinema dailies by language code; same shape and rules as `results`. */
+  home?: Record<string, Record<string, Entry>>
 }
 
 const USERS = 'cl:users'
@@ -179,6 +181,25 @@ function merge(into: Record<string, Entry>, incoming: unknown) {
       n++
     }
   }
+}
+
+const LANG_RE = /^[a-z]{2}$/
+const MAX_LANGS = 8
+
+/** Merge home-cinema results language by language. Returns true if anything new was stored. */
+function mergeHome(p: Player, incoming: unknown): boolean {
+  if (!incoming || typeof incoming !== 'object') return false
+  p.home ??= {}
+  let changed = false
+  for (const [lang, v] of Object.entries(incoming as Record<string, unknown>)) {
+    if (!LANG_RE.test(lang) || (!(lang in p.home) && Object.keys(p.home).length >= MAX_LANGS)) continue
+    const into = (p.home[lang] ??= {})
+    const before = Object.keys(into).length
+    merge(into, v)
+    if (Object.keys(into).length !== before) changed = true
+    else if (!before) delete p.home[lang]
+  }
+  return changed
 }
 
 /** A browser's push subscription plus what the reminder needs: its time zone and when it last played. */
@@ -263,8 +284,9 @@ export async function handle(store: Store, method: string, body: unknown): Promi
       await store.del(failKey(key))
     }
     merge(p.results, b.results)
+    mergeHome(p, b.home)
     await store.set(userKey(key), JSON.stringify(p))
-    return { status: 200, body: { name: p.name, token: p.token, results: p.results, created } }
+    return { status: 200, body: { name: p.name, token: p.token, results: p.results, home: p.home ?? {}, created } }
   }
 
   if (b.action === 'sync') {
@@ -272,10 +294,11 @@ export async function handle(store: Store, method: string, body: unknown): Promi
     if ('status' in p) return p
     const before = Object.keys(p.results).length
     merge(p.results, b.results)
-    if (Object.keys(p.results).length !== before) {
+    const homeChanged = mergeHome(p, b.home)
+    if (homeChanged || Object.keys(p.results).length !== before) {
       await store.set(userKey(p.name.toLowerCase()), JSON.stringify(p))
     }
-    return { status: 200, body: { results: p.results } }
+    return { status: 200, body: { results: p.results, home: p.home ?? {} } }
   }
 
   if (b.action === 'board') {
@@ -287,8 +310,9 @@ export async function handle(store: Store, method: string, body: unknown): Promi
       if (!raw) return []
       const p = JSON.parse(raw) as Player
       // Chains stay private: friends see scores, not the route (no spoilers).
-      const results = Object.fromEntries(Object.entries(p.results).map(([d, e]) => [d, { ...e, path: undefined }]))
-      return [{ name: p.name, results }]
+      const strip = (r: Record<string, Entry>) => Object.fromEntries(Object.entries(r).map(([d, e]) => [d, { ...e, path: undefined }]))
+      const home = Object.fromEntries(Object.entries(p.home ?? {}).map(([lang, r]) => [lang, strip(r)]))
+      return [{ name: p.name, results: strip(p.results), home }]
     })
     return { status: 200, body: { players } }
   }

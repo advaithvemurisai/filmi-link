@@ -27,6 +27,8 @@ interface Props {
   isToday: boolean
   /** India daily number, so share links can challenge friends to beat the score. */
   dailyNo: number | null
+  /** Home-cinema language of this daily, so its share link points back at the right schedule. */
+  shareLang: string | null
   /** Free play: share links carry the random pair so friends can play it too. */
   free: boolean
   /** Links a friend's share link said they used today, if the player arrived from one. */
@@ -71,6 +73,10 @@ export default function Game(props: Props) {
   const [query, setQuery] = useState('')
   const [quitArmed, setQuitArmed] = useArmed()
   const listRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  // Time spent with the tab hidden doesn't count against the speed score.
+  const pausedMs = useRef(0)
+  const hiddenAt = useRef<number | null>(document.hidden ? Date.now() : null)
 
   const current = path[path.length - 1]
   const links = linkCount(path)
@@ -85,6 +91,34 @@ export default function Game(props: Props) {
     if (!result) props.onProgress({ path, startedAt, hints })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, hints])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) hiddenAt.current = Date.now()
+      else if (hiddenAt.current !== null) {
+        pausedMs.current += Date.now() - hiddenAt.current
+        hiddenAt.current = null
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+  const elapsedSeconds = (at: number) => Math.round((at - startedAt - pausedMs.current - (hiddenAt.current ? at - hiddenAt.current : 0)) / 1000)
+
+  // Type anywhere (or press "/") to jump into the search box, so keyboard players never have to hunt for it.
+  useEffect(() => {
+    if (result) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || !/\S/.test(e.key)) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable], [role="dialog"]') || document.querySelector('[role="dialog"]')) return
+      if (!searchRef.current) return
+      if (e.key === '/') e.preventDefault()
+      searchRef.current.focus({ preventScroll: true })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [result])
 
   useEffect(() => {
     if (hint) listRef.current?.querySelector('.is-hint')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -132,7 +166,7 @@ export default function Game(props: Props) {
   function finish(finalPath: Node[], gaveUp: boolean) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
     const r = {
-      links: linkCount(finalPath), par: puzzle.par, seconds: Math.min(MAX_SECONDS, Math.round((Date.now() - startedAt) / 1000)),
+      links: linkCount(finalPath), par: puzzle.par, seconds: Math.max(0, Math.min(MAX_SECONDS, elapsedSeconds(Date.now()))),
       hints, gaveUp, path: finalPath,
     }
     if (!gaveUp) setNewFaces(collectCast(finalPath, localDateKey()).length)
@@ -167,7 +201,7 @@ export default function Game(props: Props) {
     finish(path, true)
   }
 
-  const seconds = result ? result.seconds : Math.min(MAX_SECONDS, Math.round((now - startedAt) / 1000))
+  const seconds = result ? result.seconds : Math.max(0, Math.min(MAX_SECONDS, elapsedSeconds(now)))
   const isHint = (n: Node) => hint?.kind === n.kind && hint.id === n.id
   const deadEnd = !q && options.every((o) => inPath.has(`${o.node.kind}:${o.node.id}`))
 
@@ -206,6 +240,12 @@ export default function Game(props: Props) {
             </p>
           )}
 
+          {/* Screen readers hear where the chain stands after every pick, and any hint. */}
+          <p className="sr-only" role="status" aria-live="polite">
+            {`Link ${links} of ${puzzle.par}. Now ${current.kind === 'film' ? 'at' : 'with'} ${nodeLabel(idx, current)}. ${options.length} options.`}
+            {hint ? ` Hint: ${nodeLabel(idx, hint)}.` : ''}
+          </p>
+
           <Filmstrip
             idx={idx} path={path} activeIndex={path.length - 1}
             goal={{ par: puzzle.par, target: puzzle.e }}
@@ -233,10 +273,14 @@ export default function Game(props: Props) {
                 <label className="search">
                   <Icon name="search" size={16} />
                   <input
-                    placeholder={current.kind === 'film' ? 'Find cast & crew' : 'Find a film'}
+                    ref={searchRef}
+                    placeholder={current.kind === 'film' ? 'Find cast & crew (press / to search)' : 'Find a film (press / to search)'}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && q && visible.length === 1) go(visible[0].node) }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && q && visible.length === 1) go(visible[0].node)
+                      else if (e.key === 'Escape') setQuery('')
+                    }}
                     enterKeyHint="go"
                   />
                 </label>
@@ -543,10 +587,10 @@ function FriendChain({ idx, friend, mine }: { idx: Index; friend: Node[]; mine: 
  * A solved India daily links back as a challenge: friends land on "A friend linked these in N links".
  * A random chain links to the same pair of films, with the score and chain when it was solved.
  */
-function shareQuery(puzzle: PuzzleDef, result: Omit<Result, 'live'>, dailyNo: number | null, free: boolean) {
+function shareQuery(puzzle: PuzzleDef, result: Omit<Result, 'live'>, dailyNo: number | null, free: boolean, lang: string | null) {
   const score = result.gaveUp ? '' : `-${result.links}${result.path.slice(1, -1).map((n) => `.${n.id}`).join('')}`
   if (free) return `?r=${puzzle.s}.${puzzle.e}${score}`
-  return dailyNo && score ? `?c=${dailyNo}${score}` : ''
+  return dailyNo && score ? `?c=${lang ? `${lang}.` : ''}${dailyNo}${score}` : ''
 }
 
 /** The 0-1000 score with where each point came from, so the number is never a mystery. */
@@ -565,7 +609,7 @@ function ScoreCard({ parts }: { parts: ScoreParts }) {
 }
 
 function ResultPanel({
-  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, free, friendPath,
+  idx, puzzle, result, optimal, newFaces, label, shareTitle, isToday, routeShare, dailyNo, shareLang, free, friendPath,
   onNewRandom, onOpenArchive, player, onSaveStreak, onOpenFriends,
 }: Props & { result: Omit<Result, 'live'>; optimal: Node[] | null; newFaces: number }) {
   const [copied, setCopied] = useState(false)
@@ -605,7 +649,7 @@ function ResultPanel({
     result.gaveUp
       ? `${blocks} Shelved (shortest ${puzzle.par})`
       : `${blocks} ${rating}${cult ? ' · Cult Classic route' : ''} · ${result.links} link${result.links > 1 ? 's' : ''} · ⏱ ${clock(result.seconds)}${result.hints ? ` · 💡${result.hints}` : ''} · ${pts.total} pts`,
-    window.location.origin + import.meta.env.BASE_URL + shareQuery(puzzle, result, dailyNo, free),
+    window.location.origin + import.meta.env.BASE_URL + shareQuery(puzzle, result, dailyNo, free, shareLang),
   ].join('\n')
 
   async function doShare() {

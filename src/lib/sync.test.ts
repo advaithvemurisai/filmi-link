@@ -119,4 +119,23 @@ describe('sync api', () => {
     await new Promise((resolve) => setTimeout(resolve, 1100))
     expect(await store.get('ttl-test')).toBeNull()
   })
+
+  it('syncs home-cinema results per language across devices, first result per day winning', async () => {
+    const store = memoryStore()
+    const laptop = await handle(store, 'POST', { action: 'login', name: 'Meera', pin: '4321' })
+    const { name, token } = laptop.body as { name: string; token: string }
+    await handle(store, 'POST', { action: 'sync', name, token, results: {}, home: { te: { '2026-10-08': entry(2) }, xx1: { '2026-10-08': entry(2) } } })
+
+    // A second device with nothing local gets the Telugu result back; junk language codes are dropped.
+    const phone = await handle(store, 'POST', { action: 'login', name: 'Meera', pin: '4321', results: {}, home: { te: { '2026-10-08': entry(5) } } })
+    const home = phone.body.home as Record<string, Record<string, { links: number }>>
+    expect(Object.keys(home)).toEqual(['te'])
+    expect(home.te['2026-10-08'].links).toBe(2)
+
+    // Friends' boards carry home-cinema scores too, still without chains.
+    const board = await handle(store, 'POST', { action: 'board', name, token })
+    const me = (board.body.players as { home: Record<string, Record<string, Record<string, unknown>>> }[])[0]
+    expect(me.home.te['2026-10-08'].links).toBe(2)
+    expect(JSON.parse(JSON.stringify(me.home.te['2026-10-08'])).path).toBeUndefined()
+  })
 })
