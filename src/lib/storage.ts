@@ -142,6 +142,36 @@ export function computeStats(results: Record<string, Score>, today: string) {
   return { played: entries.length, solved: solved.length, streak, best, avgScore, bestScore, blockbusters: tiers.Blockbuster ?? 0, tiers }
 }
 
+/** Share of the best home-cinema daily's points added on top of the India daily's. */
+export const HOME_WEIGHT = 0.25
+
+/**
+ * A day's points across dailies: the India daily counts in full, and only the best home-cinema daily
+ * adds a bonus, so playing several languages can't outscore the shared puzzle. Null if nothing was played.
+ */
+export function dayPoints(india: Score | undefined, home: Score[]) {
+  if (!india && !home.length) return null
+  const main = india ? scoreFor(india).total : 0
+  const bonus = Math.round(HOME_WEIGHT * Math.max(0, ...home.map((r) => scoreFor(r).total)))
+  return { main, bonus, total: main + bonus }
+}
+
+/**
+ * One result per day across all dailies, for streaks and calendars: a live win anywhere keeps the day,
+ * then the higher score wins.
+ */
+export function bestByDay<T extends Score>(sets: Record<string, T>[]): Record<string, T> {
+  const out: Record<string, T> = {}
+  const good = (r: T) => Number(r.live && !r.gaveUp)
+  for (const set of sets) {
+    for (const [d, r] of Object.entries(set)) {
+      const cur = out[d]
+      if (!cur || good(r) - good(cur) > 0 || (good(r) === good(cur) && scoreFor(r).total > scoreFor(cur).total)) out[d] = r
+    }
+  }
+  return out
+}
+
 /** Everyone a player has linked through: person id → first date and how many chains. */
 export type Cast = Record<string, { d: string; n: number }>
 export const loadCast = () => read<Cast>('fl:cast', {})

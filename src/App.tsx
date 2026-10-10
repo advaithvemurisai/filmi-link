@@ -8,7 +8,7 @@ import { buildIndex, isValidChain, linkCount, randomPuzzle, type GraphData, type
 import { addDays, localDateKey, puzzleFor, puzzleNumber, type PuzzleDef, type PuzzleFile } from './lib/daily'
 import { HOME_LANGS, langName } from './lib/format'
 import {
-  computeStats, hasPlayed, loadAllHomeResults, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
+  bestByDay, computeStats, hasPlayed, loadAllHomeResults, loadProgress, loadRecentFilms, loadResults, loadSettings, rememberFilms, saveProgress, saveResults,
   saveSettings,
   type Result, type Track,
 } from './lib/storage'
@@ -244,7 +244,8 @@ export default function App() {
     saveSettings(next)
   }
 
-  const streak = computeStats(results, today).streak
+  // A day keeps the streak if any daily was won on it, India's or a home cinema's.
+  const streak = computeStats(bestByDay([results, ...Object.values(loadAllHomeResults(HOME_LANGS)), homeResults]), today).streak
   // The newest India daily played on its own day, so a subscribed browser isn't reminded after playing.
   const lastPlayed = Object.keys(results).reduce((m, d) => (results[d].live && d > m ? d : m), '')
   useEffect(() => reportPlayed({ last: lastPlayed, streak }), [lastPlayed, streak])

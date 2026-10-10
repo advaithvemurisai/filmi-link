@@ -3,7 +3,7 @@ import { Icon, Modal, PlayerBadge, Stamp } from './Bits'
 import { fetchFriends, login, SyncError, type Account, type Friend, type HomeResults } from '../lib/account'
 import { addDays } from '../lib/daily'
 import { HOME_LANGS, clock, langName } from '../lib/format'
-import { computeStats, loadAllHomeResults, rate, scoreFor, tierClass, type Result } from '../lib/storage'
+import { bestByDay, computeStats, dayPoints, loadAllHomeResults, rate, scoreFor, tierClass, type Result } from '../lib/storage'
 
 /** Name + 4-digit PIN. A new name creates a player; an existing name needs its PIN. */
 export function AccountSheet({
@@ -87,9 +87,7 @@ export function AccountSheet({
   )
 }
 
-type DayScore = Friend['results'][string]
-
-/** Friends ranked by today's score across all their dailies, with streaks alongside. Chains stay hidden so nothing is spoiled. */
+/** Friends ranked by today's score (India daily plus a home-cinema bonus), with streaks alongside. Chains stay hidden so nothing is spoiled. */
 export function FriendsSheet({
   account, today, onClose, onSignIn,
 }: {
@@ -121,23 +119,19 @@ export function FriendsSheet({
   }
 
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6))
-  // Every daily counts, not just India's: today's points add up across the dailies someone finished,
-  // and a day keeps the streak alive if any of them was won on its own day. Played today first, then
-  // points, streak and speed break ties.
+  // The India daily is the main event: it scores in full, and the best home-cinema daily adds a 25% bonus.
+  // A day keeps the streak alive if any daily was won on it. Played today first, then points, streak and speed.
   const rows = (players ?? [])
     .map((p) => {
-      const sets: [string, Record<string, DayScore>][] = [['India', p.results], ...Object.entries(p.home ?? {}).map(([l, r]): [string, Record<string, DayScore>] => [langName(l), r])]
-      const todaysAll = sets.flatMap(([label, r]) => (r[today] ? [{ label, r: r[today] }] : []))
-      const best = (day: string) => {
-        const all = sets.flatMap(([, r]) => (r[day] ? [r[day]] : []))
-        return all.sort((a, b) => Number(b.live && !b.gaveUp) - Number(a.live && !a.gaveUp) || scoreFor(b).total - scoreFor(a).total)[0]
-      }
-      const days = new Set(sets.flatMap(([, r]) => Object.keys(r)))
-      const merged: Record<string, DayScore> = {}
-      for (const d of days) merged[d] = best(d)
-      const todays = merged[today]
-      const pts = todaysAll.length ? todaysAll.reduce((n, { r }) => n + (r.gaveUp ? 0 : scoreFor(r).total), 0) : null
-      return { ...p, merged, stats: computeStats(merged, today), todays, todaysAll, pts }
+      const homeSets = Object.entries(p.home ?? {})
+      const homeToday = homeSets.flatMap(([l, r]) => (r[today] ? [{ lang: l, r: r[today] }] : []))
+        .sort((a, b) => scoreFor(b.r).total - scoreFor(a.r).total)
+      const india = p.results[today]
+      const day = dayPoints(india, homeToday.map((h) => h.r))
+      const merged = bestByDay([p.results, ...homeSets.map(([, r]) => r)])
+      // The stamp shows the India result when there is one, else the best home-cinema result.
+      const todays = india ?? homeToday[0]?.r
+      return { ...p, merged, stats: computeStats(merged, today), todays, day, bonusLang: homeToday[0]?.lang, pts: day?.total ?? null }
     })
     .sort((a, b) =>
       Number(b.todays !== undefined) - Number(a.todays !== undefined) ||
@@ -172,8 +166,10 @@ export function FriendsSheet({
                     : <>
                       <span className="friend-pts"><b>{p.pts ?? 0}</b> pts</span>
                       <Stamp rating={rate(t) ?? 'Shelved'} small />
-                      {p.todaysAll.length > 1
-                        ? <small title="Points from each daily finished today">{p.todaysAll.map(({ label, r }) => `${label} ${r.gaveUp ? 0 : scoreFor(r).total}`).join(' + ')}</small>
+                      {p.day && p.bonusLang
+                        ? <small title={`India daily in full, plus a quarter of the best home-cinema daily (${langName(p.bonusLang)})`}>
+                            {p.results[today] ? `India ${p.day.main}` : 'No India'} · +{p.day.bonus} {langName(p.bonusLang)}
+                          </small>
                         : <small>{t.links} link{t.links === 1 ? '' : 's'} · {clock(t.seconds)}{t.hints ? ` · 💡${t.hints}` : ''}</small>}
                     </>}
                 </span>
