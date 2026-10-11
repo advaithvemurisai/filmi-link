@@ -308,11 +308,13 @@ class Graph:
                         best = (score, r[i], text)
         return best
 
-    def alternates(self, routes: list[list[int]], n: int = 3) -> list[list[int]]:
-        """Distinct, recognisable routes: findable ones first, then by fame of the people on them."""
+    def alternates(self, routes: list[list[int]], n: int = 3, published: bool = False) -> list[list[int]]:
+        """Distinct, recognisable routes: findable ones first, then by fame of the people on them.
+        New puzzles never show a route through a retired industry's films; published ones keep theirs."""
         def fame(r):
             return sum(self.deg_pct[r[i]] for i in range(1, len(r), 2))
-        ranked = sorted(routes, key=lambda r: (not self.is_fair(r), -fame(r)))
+        live = routes if published else [r for r in routes if not any(self.lang[f] in RETIRED_LANGUAGES for f in r[::2])]
+        ranked = sorted(live, key=lambda r: (not self.is_fair(r), -fame(r)))
         picked: list[list[int]] = []
         for r in ranked:
             people = set(r[1::2])
@@ -403,7 +405,7 @@ class Scheduler:
         self.recent_langs: list[tuple[int, str]] = []
         self.review: list[dict] = []
 
-    def describe(self, s: int, e: int, dist_f, dist_p, counts, mats: dict | None = None) -> dict:
+    def describe(self, s: int, e: int, dist_f, dist_p, counts, mats: dict | None = None, published: bool = False) -> dict:
         """Everything the app and the review need about a chosen pair."""
         G = self.G
         routes = G.routes(s, e, dist_f, dist_p, self.rng, mats)
@@ -411,7 +413,7 @@ class Scheduler:
         spot = G.spot(routes)
         return {
             "routes": routes, "carrier": carrier, "spot": spot,
-            "alts": G.alternates(routes),
+            "alts": G.alternates(routes, published=published),
             "total": counts["all"][e], "fair": counts["fair"][e], "nohub": counts["nohub"][e],
         }
 
@@ -437,7 +439,8 @@ class Scheduler:
             pz["alts"] = [[(G.fids if i % 2 == 0 else G.pids)[n] for i, n in enumerate(r)] for r in info["alts"]]
         return pz
 
-    def fixed(self, day: int, s_id: str, e_id: str, theme: str | None, rule: str | None = None, ban: int | None = None) -> dict | None:
+    def fixed(self, day: int, s_id: str, e_id: str, theme: str | None, rule: str | None = None, ban: int | None = None,
+              published: bool = False) -> dict | None:
         """A known pair (already published, or a hand-picked override), re-verified on the current graph
         under the rule it was published with."""
         G = self.G
@@ -448,7 +451,7 @@ class Scheduler:
         dist_f, dist_p, counts = G.forward(s, mats)
         if dist_f[e] < 1:
             return None
-        info = self.describe(s, e, dist_f, dist_p, counts, mats)
+        info = self.describe(s, e, dist_f, dist_p, counts, mats, published)
         self.record(day, s, e, info["carrier"])
         return self.puzzle(s, e, info, theme, rule, ban)
 
@@ -574,7 +577,7 @@ def build_track(G: Graph, track: str, args, overrides: dict) -> Scheduler:
         if old.get("epoch") == args.epoch:
             keep_days = (date.fromisoformat(args.keep_until) - epoch).days + 1
             for day, p in enumerate(old["puzzles"][:max(0, keep_days)]):
-                pz = sch.fixed(day, p["s"], p["e"], p.get("theme"), p.get("rule"), p.get("ban"))
+                pz = sch.fixed(day, p["s"], p["e"], p.get("theme"), p.get("rule"), p.get("ban"), published=True)
                 if not pz:
                     break
                 puzzles.append(pz)

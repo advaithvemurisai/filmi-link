@@ -27,6 +27,10 @@ export interface Index {
   sharedName: Set<string>
 }
 
+/** Industries no longer in the game (RETIRED_LANGUAGES in pipeline/graph_io.py). Their films stay in the
+ * graph only for already-published puzzles, so they're never picked as a random chain's endpoints. */
+export const RETIRED_LANGS: ReadonlySet<string> = new Set(['bn'])
+
 /** A person's best-known film (most votes), to tell namesakes apart. */
 export function knownFor(idx: Index, personId: string): string | null {
   let best: string | null = null
@@ -131,7 +135,7 @@ export const linkCount = (path: Node[]) => path.filter((n) => n.kind === 'person
  * chains don't keep landing on the same few films.
  */
 export function randomPuzzle(idx: Index, want: number, rng = Math.random, avoid: ReadonlySet<string> = new Set()) {
-  const films = Object.keys(idx.data.films).sort((a, b) => idx.data.films[b].pop - idx.data.films[a].pop)
+  const films = Object.keys(idx.data.films).filter((f) => !RETIRED_LANGS.has(idx.data.films[f].l)).sort((a, b) => idx.data.films[b].pop - idx.data.films[a].pop)
   // Endpoints come from well-known films only (matches POOL_SIZE in generate_puzzles.py).
   const pool = films.slice(0, Math.min(800, Math.max(60, Math.floor(films.length * 0.4))))
   // Well-known films sit so close together that par 4 rarely exists inside the pool, so the end film
