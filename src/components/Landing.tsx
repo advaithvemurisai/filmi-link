@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Avatar, Icon, LangTag, Poster } from './Bits'
 import { ROLE_ICON } from './bit-helpers'
 import Credits from './Credits'
@@ -64,7 +64,10 @@ export default function Landing({ idx: full, preview, file, today, challenge, on
         {/* A cinema letterboard: today's show, put up by hand. */}
         <div className="marquee">
           <p className="marquee-top">
-            Now showing{puzzleNo ? ` · No. ${puzzleNo}` : ''} · {date}{puzzle ? ` · ${difficultyOf(puzzle)}` : ''}{puzzle?.rule ? ` · ${RULES[puzzle.rule].name}` : ''}
+            {/* Each item stays whole when the line wraps on a phone. */}
+            {['Now showing', puzzleNo && `No. ${puzzleNo}`, date, puzzle && difficultyOf(puzzle), puzzle?.rule && RULES[puzzle.rule].name]
+              .filter(Boolean)
+              .map((s, i) => <Fragment key={i}>{i ? ' · ' : ''}<span>{s}</span></Fragment>)}
           </p>
           <h1>
             {challenge

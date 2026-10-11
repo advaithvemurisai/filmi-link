@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { creditOk, crewLink, crewLinks, crewNeeded, isValidChain, knownFor, linkCount, nodeLabel, shortestOnward, shortestPath, type Index, type Node, type Role, type Rule } from '../lib/graph'
 import { RULES, difficultyOf, localDateKey, msToMidnight, ruleLine, ruleOf, type PuzzleDef } from '../lib/daily'
 import { IMG, clock, langName } from '../lib/format'
@@ -87,6 +87,7 @@ export default function Game(props: Props) {
   const [quitArmed, setQuitArmed] = useArmed()
   /** Which daily this is, for analytics: a language code, 'all' for India, or 'free'. */
   const metric = { daily: props.free ? 'free' : props.shareLang ?? 'all', no: props.dailyNo, hard, grade: difficultyOf(puzzle) }
+  const gameRef = useRef<HTMLElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   // Time spent with the tab hidden doesn't count against the speed score.
@@ -144,6 +145,16 @@ export default function Game(props: Props) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [result])
+
+  // On phones the options are part of the page, so a pick deep in a long list would leave the player
+  // mid-way down the next one. After each pick, bring the filmstrip back to the top of the screen.
+  const picked = useRef(false)
+  useLayoutEffect(() => {
+    if (!picked.current) return
+    picked.current = false
+    const strip = gameRef.current?.querySelector('.strip')
+    if (!result && strip && !WIDE.matches) window.scrollTo({ top: window.scrollY + strip.getBoundingClientRect().top - 8 })
+  }, [path, result])
 
   useEffect(() => {
     if (hint) listRef.current?.querySelector('.is-hint')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -218,6 +229,7 @@ export default function Game(props: Props) {
       setStartedAt(Date.now())
       event('puzzle_start', metric)
     }
+    picked.current = true
     launchFrom(from?.querySelector('.poster, .avatar') ?? null)
     setPath(next)
     setHint(null)
@@ -248,8 +260,8 @@ export default function Game(props: Props) {
   const deadEnd = !q && options.every((o) => inPath.has(`${o.node.kind}:${o.node.id}`))
 
   return (
-    <main className="game">
-      <Stage idx={idx} puzzle={puzzle} label={props.label} challenge={props.challenge} />
+    <main className="game" ref={gameRef}>
+      <Stage idx={idx} puzzle={puzzle} label={props.label} challenge={props.challenge} compact={!result && path.length > 1} />
 
       {result ? (
         <ResultPanel {...props} result={result} optimal={optimal} newFaces={newFaces} />
@@ -419,6 +431,8 @@ export default function Game(props: Props) {
 
 /** Only mention the "/" shortcut where there's a keyboard to press it on. */
 const KEYBOARD = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches
+/** Two-column board, where the options scroll in their own panel instead of the page. */
+const WIDE = window.matchMedia('(min-width: 960px)')
 
 /** "Known for <film>" under a name another person shares, so two Rekhas can be told apart. */
 function KnownFor({ idx, id }: { idx: Index; id: string }) {
@@ -591,12 +605,12 @@ function TargetPanel({
 }
 
 /** Start and target as a double bill, over a dimmed wash of both posters. */
-function Stage({ idx, puzzle, label, challenge }: { idx: Index; puzzle: PuzzleDef; label: string; challenge: number | null }) {
+function Stage({ idx, puzzle, label, challenge, compact }: { idx: Index; puzzle: PuzzleDef; label: string; challenge: number | null; compact?: boolean }) {
   const { films } = idx.data
   const bgA = IMG(films[puzzle.s].p, 'w342')
   const bgB = IMG(films[puzzle.e].p, 'w342')
   return (
-    <section className="stage" aria-label="Puzzle">
+    <section className={`stage ${compact ? 'is-compact' : ''}`} aria-label="Puzzle">
       <div className="stage-wash" aria-hidden>
         {bgA && <img src={bgA} alt="" />}
         {bgB && <img src={bgB} alt="" />}

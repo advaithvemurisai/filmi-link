@@ -150,7 +150,8 @@ export function Filmstrip({
     const li = list.querySelector<HTMLElement>(`[data-i="${path.length - 1}"]`)
     if (li && !replay) list.scrollLeft = li.offsetLeft - list.clientWidth / 2 + li.offsetWidth / 2
     const art = li?.querySelector<HTMLElement>('.frame-art')
-    if (grew && art) fly(art)
+    // Measure the landing spot next frame, after the game has scrolled the strip into view.
+    if (grew && art) requestAnimationFrame(() => fly(art))
     else consumeFlyFrom()
   }, [path.length, replay])
 
@@ -223,6 +224,13 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), summa
 
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   const box = useRef<HTMLDivElement>(null)
+  // The page behind stays put while the dialog is open, so a swipe in it never scrolls the game.
+  useEffect(() => {
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
+    return () => { root.style.overflow = prev }
+  }, [])
   useEffect(() => {
     // Keyboard users: focus moves into the dialog, Tab stays inside it, and closing returns focus to where it was.
     const opener = document.activeElement as HTMLElement | null
