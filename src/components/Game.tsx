@@ -706,6 +706,9 @@ function shareQuery(puzzle: PuzzleDef, result: Omit<Result, 'live'>, dailyNo: nu
   return dailyNo && score ? `?c=${lang ? `${lang}.` : ''}${dailyNo}${score}` : ''
 }
 
+/** A long, wandering chain shows this many blocks on its ticket, then a count of the rest. */
+const TICKET_BLOCKS = 8
+
 /** The 0-1000 score with where each point came from, so the number is never a mystery. */
 function ScoreCard({ parts }: { parts: ScoreParts }) {
   const rows: [string, number][] = [['Links', parts.links], ['Hints', parts.hints], ['Speed', parts.speed], ...(parts.rare ? [['Rare route', parts.rare] as [string, number]] : [])]
@@ -851,7 +854,8 @@ function ResultPanel({
           <p className="ticket-blocks" aria-hidden>
             {result.gaveUp
               ? Array.from({ length: puzzle.par }, (_, i) => <i key={i} className="is-lost" />)
-              : Array.from({ length: result.links }, (_, i) => <i key={i} className={i < puzzle.par ? '' : 'is-over'} />)}
+              : Array.from({ length: Math.min(result.links, TICKET_BLOCKS) }, (_, i) => <i key={i} className={i < puzzle.par ? '' : 'is-over'} />)}
+            {!result.gaveUp && result.links > TICKET_BLOCKS && <b className="ticket-more">+{result.links - TICKET_BLOCKS}</b>}
           </p>
           <p className="ticket-meta">
             {result.gaveUp ? `Shortest was ${puzzle.par}` : `${result.links} link${result.links > 1 ? 's' : ''} · shortest ${puzzle.par} · ${pts.total} pts`} · {clock(result.seconds)}
