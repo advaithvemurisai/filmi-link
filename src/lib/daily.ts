@@ -12,18 +12,28 @@ export interface PuzzleDef {
   alts?: string[][]
   /** Generator's grade from chain length and how many (findable) shortest routes exist: 1 easy, 2 medium, 3 hard. */
   d?: number
-  /** The weekly ladder's rule for the day: 'nostars' (people with `ban`+ films can't be used) or 'crew'. */
+  /** The weekly ladder's rule for the day: 'nostars' (people with `ban`+ films can't be used) or 'crew'
+   * (the chain must make `min` crew links; without `min`, the old rule: no actors at all). */
   rule?: 'nostars' | 'crew'
   ban?: number
+  min?: number
 }
 
 /** The day's rule as the graph helpers take it, or null on a normal day. */
-export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban } : null)
+export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban, min: p.min } : null)
 
-/** Name and one-line explanation of each rule, for the stage, the landing page and share text. */
-export const RULES: Record<Rule['kind'], { name: string; line: string }> = {
-  nostars: { name: 'No Superstars', line: 'The most-connected stars are benched today. Link through everyone else.' },
-  crew: { name: 'Crew Call', line: 'Only directors and music composers can link films today. No actors.' },
+/** Name of each rule, for the stage, the landing page and share text. */
+export const RULES: Record<Rule['kind'], { name: string }> = {
+  nostars: { name: 'No Superstars' },
+  crew: { name: 'Crew Call' },
+}
+
+/** One-line explanation of the day's rule. */
+export function ruleLine(rule: Rule): string {
+  if (rule.kind === 'nostars') return 'The most-connected stars are benched today. Link through everyone else.'
+  if (rule.min === undefined) return 'Only directors and music composers can link films today. No actors.'
+  const links = rule.min === 1 ? 'one crew link' : `${rule.min} crew links`
+  return `Actors count, but your chain needs ${links}: someone who directed or scored the films on both sides of them.`
 }
 
 const GRADES = ['Easy', 'Medium', 'Hard']

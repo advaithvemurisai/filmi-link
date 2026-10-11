@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
-import { buildIndex, canUse, isValidChain, linkCount, randomPuzzle, shortestPath, startFaces, type GraphData, type Node } from './graph'
+import { buildIndex, canUse, crewLinks, isValidChain, linkCount, randomPuzzle, shortestOnward, shortestPath, startFaces, type GraphData, type Node } from './graph'
 import { freeFromLink, parseFreeLink, validChallenge, validResults } from './results'
 import { addDays, dayDiff, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from './daily'
 import { collectCast, computeStats, loadCast, loadProgress, loadResults, ratingFor, saveResults, type Result } from './storage'
@@ -39,6 +39,41 @@ describe('shortestPath', () => {
   })
   it('returns null when unreachable', () => {
     expect(shortestPath(idx, { kind: 'film', id: 'A' }, 'D')).toBeNull()
+  })
+})
+
+// Crew Call: S —a— T directly, but the only crew link is director d on S and M; M —a2— T.
+const crewTiny: GraphData = {
+  meta: { source: 'seed', generated: '', films: 3, people: 3 },
+  films: {
+    S: { t: 'S', y: 2000, l: 'hi', p: null, pop: 3 },
+    M: { t: 'M', y: 2001, l: 'hi', p: null, pop: 2 },
+    T: { t: 'T', y: 2002, l: 'hi', p: null, pop: 1 },
+  },
+  people: { a: { n: 'Actor', i: null }, a2: { n: 'Actor Two', i: null }, d: { n: 'Director', i: null } },
+  credits: { S: [['a', 'Actor'], ['d', 'Director']], M: [['d', 'Director'], ['a2', 'Actor']], T: [['a', 'Actor'], ['a2', 'Actor']] },
+}
+
+describe('Crew Call', () => {
+  const idx = buildIndex(crewTiny)
+  const ids = (p: Node[] | null) => p?.map((n) => n.id)
+  const S: Node = { kind: 'film', id: 'S' }
+  it('allows actors but routes through the crew links the day needs', () => {
+    expect(ids(shortestPath(idx, S, 'T'))).toEqual(['S', 'a', 'T'])
+    expect(ids(shortestPath(idx, S, 'T', { kind: 'crew', min: 1 }))).toEqual(['S', 'd', 'M', 'a2', 'T'])
+    expect(shortestPath(idx, S, 'T', { kind: 'crew', min: 2 })).not.toBeNull()
+  })
+  it('keeps the old directors-and-composers-only rule for puzzles published without a minimum', () => {
+    expect(shortestPath(idx, S, 'T', { kind: 'crew' })).toBeNull()
+  })
+  it('counts crew links made so far when planning onward (hints)', () => {
+    const made: Node[] = [S, { kind: 'person', id: 'd' }, { kind: 'film', id: 'M' }]
+    expect(crewLinks(idx, made)).toBe(1)
+    expect(ids(shortestOnward(idx, made, 'T', { kind: 'crew', min: 1 }))).toEqual(['M', 'a2', 'T'])
+    // Reaching the target too early doesn't count: the chain has to go back out for its crew link.
+    const early: Node[] = [S, { kind: 'person', id: 'a' }, { kind: 'film', id: 'T' }]
+    expect(crewLinks(idx, early)).toBe(0)
+    expect(linkCount(shortestOnward(idx, early, 'T', { kind: 'crew', min: 1 })!)).toBe(3)
   })
 })
 

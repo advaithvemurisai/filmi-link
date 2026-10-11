@@ -40,15 +40,33 @@ export function knownFor(idx: Index, personId: string): string | null {
 
 /**
  * A day's rule, from the weekly ladder. `nostars`: people with `ban` or more films sit the day out.
- * `crew`: only director and music credits link films.
+ * `crew`: anyone can link films, but the chain must make at least `min` crew links (see `crewLink`).
+ * A `crew` puzzle without `min` was published under the old rule, where only director and music credits link.
  */
-export interface Rule { kind: 'nostars' | 'crew'; ban?: number }
+export interface Rule { kind: 'nostars' | 'crew'; ban?: number; min?: number }
 
 /** Whether one credit (a person in a role on some film) can be used under the day's rule. */
 export function creditOk(idx: Index, rule: Rule | null | undefined, personId: string, role: Role): boolean {
   if (!rule) return true
   if (rule.kind === 'nostars') return (idx.degree[personId] ?? 0) < (rule.ban ?? Infinity)
-  return role !== 'Actor'
+  return rule.min !== undefined || role !== 'Actor'
+}
+
+/** Crew links a chain must make under the day's rule (0 on any other day). */
+export const crewNeeded = (rule: Rule | null | undefined) => (rule?.kind === 'crew' ? rule.min ?? 0 : 0)
+
+const crewCredit = (idx: Index, filmId: string, personId: string) =>
+  (idx.filmCredits[filmId] ?? []).some((c) => c.id === personId && c.role !== 'Actor')
+
+/** A crew link: the person directed or scored both films on either side of them (two different films). */
+export const crewLink = (idx: Index, a: string, personId: string, b: string) =>
+  a !== b && crewCredit(idx, a, personId) && crewCredit(idx, b, personId)
+
+/** Crew links made along a chain (films and people alternating, a film first). */
+export function crewLinks(idx: Index, path: Node[]): number {
+  let n = 0
+  for (let i = 1; i + 1 < path.length; i += 2) n += +crewLink(idx, path[i - 1].id, path[i].id, path[i + 1].id)
+  return n
 }
 
 /** Whether `personId` can link through `filmId` under the day's rule (any of their credits on it counts). */
@@ -90,6 +108,19 @@ function neighbours(idx: Index, n: Node, rule?: Rule | null): Node[] {
 
 /** Shortest chain from any node to a target film (inclusive of both ends) under the day's rule, or null. */
 export function shortestPath(idx: Index, from: Node, targetFilm: string, rule?: Rule | null): Node[] | null {
+  return shortestOnward(idx, [from], targetFilm, rule)
+}
+
+/**
+ * Shortest way on from the end of `path` to a target film, under the day's rule (a Crew Call chain must
+ * still make the crew links it's missing), or null.
+ */
+export function shortestOnward(idx: Index, path: Node[], targetFilm: string, rule?: Rule | null): Node[] | null {
+  const need = crewNeeded(rule)
+  return need ? crewShortest(idx, path, targetFilm, need) : plainShortest(idx, path[path.length - 1], targetFilm, rule)
+}
+
+function plainShortest(idx: Index, from: Node, targetFilm: string, rule?: Rule | null): Node[] | null {
   const goal = `f:${targetFilm}`
   const parent = new Map<string, Node | null>([[key(from), null]])
   const queue: Node[] = [from]
@@ -104,6 +135,106 @@ export function shortestPath(idx: Index, from: Node, targetFilm: string, rule?: 
       if (!parent.has(key(nb))) {
         parent.set(key(nb), cur)
         queue.push(nb)
+      }
+    }
+  }
+  return null
+}
+
+/** The graph as numbered films and people, with whether each credit is a crew (director/music) one. */
+interface Numbered { fid: string[]; pid: string[]; fi: Map<string, number>; pi: Map<string, number>; fp: number[][]; pf: number[][]; fcrew: boolean[][]; pcrew: boolean[][] }
+const numbered = new WeakMap<Index, Numbered>()
+function numberGraph(idx: Index): Numbered {
+  let g = numbered.get(idx)
+  if (g) return g
+  const fid = Object.keys(idx.filmCredits), pid = Object.keys(idx.personFilms)
+  const fi = new Map(fid.map((id, i) => [id, i])), pi = new Map(pid.map((id, i) => [id, i]))
+  const fp: number[][] = fid.map(() => []), fcrew: boolean[][] = fid.map(() => [])
+  const pf: number[][] = pid.map(() => []), pcrew: boolean[][] = pid.map(() => [])
+  fid.forEach((id, f) => {
+    const crew = new Map<number, boolean>()
+    for (const c of idx.filmCredits[id]) {
+      const p = pi.get(c.id)!
+      crew.set(p, (crew.get(p) ?? false) || c.role !== 'Actor')
+    }
+    for (const [p, isCrew] of crew) {
+      fp[f].push(p); fcrew[f].push(isCrew)
+      pf[p].push(f); pcrew[p].push(isCrew)
+    }
+  })
+  g = { fid, pid, fi, pi, fp, pf, fcrew, pcrew }
+  numbered.set(idx, g)
+  return g
+}
+
+/**
+ * Crew Call search: BFS over (film, crew links made) and (person, crew links made, film they were reached
+ * from through a crew credit). Leaving such a person through a crew credit on another film is a crew link.
+ * Two different "reached from" films per person and count are enough: every next film differs from one.
+ * The same film can be visited twice, once short of the crew links and once with them.
+ */
+function crewShortest(idx: Index, path: Node[], targetFilm: string, need: number): Node[] | null {
+  const g = numberGraph(idx)
+  const F = g.fid.length, P = g.pid.length, L = need + 1
+  const goal = g.fi.get(targetFilm)
+  if (goal === undefined) return null
+  // Film state c*F + f; person state ((c*P + p) * 3 + slot), slot 0 = not reached through a crew credit.
+  const filmFrom = new Int32Array(F * L).fill(-2) // -2 unvisited, -1 start, else the person state before
+  const personFrom = new Int32Array(P * L * 3).fill(-2)
+  const via = new Int32Array(P * L * 3).fill(-1)
+  const queue: number[] = [] // films as state, people as -(state + 1)
+
+  const from = path[path.length - 1], prev = path[path.length - 2]
+  const made = Math.min(need, crewLinks(idx, path))
+  if (from.kind === 'film') {
+    const f = g.fi.get(from.id)
+    if (f === undefined) return null
+    filmFrom[made * F + f] = -1
+    queue.push(made * F + f)
+  } else {
+    const p = g.pi.get(from.id)
+    if (p === undefined) return null
+    const crew = !!prev && crewCredit(idx, prev.id, from.id)
+    const st = (made * P + p) * 3 + +crew
+    personFrom[st] = -1
+    if (crew) via[st] = g.fi.get(prev.id) ?? -1
+    queue.push(-(st + 1))
+  }
+
+  for (let head = 0; head < queue.length; head++) {
+    const q = queue[head]
+    if (q >= 0) {
+      const c = Math.floor(q / F), f = q % F
+      if (f === goal && c === need) {
+        const out: Node[] = []
+        for (let st = q, film = true; st !== -1; film = !film) {
+          if (film) { out.unshift({ kind: 'film', id: g.fid[st % F] }); st = filmFrom[st] }
+          else { out.unshift({ kind: 'person', id: g.pid[Math.floor(st / 3) % P] }); st = personFrom[st] }
+        }
+        return out
+      }
+      const ps = g.fp[f], crew = g.fcrew[f]
+      for (let i = 0; i < ps.length; i++) {
+        const base = (c * P + ps[i]) * 3
+        let st = base
+        if (crew[i]) {
+          if (via[base + 1] === -1 || via[base + 1] === f) st = base + 1
+          else if (via[base + 2] === -1 || via[base + 2] === f) st = base + 2
+          else continue
+        }
+        if (personFrom[st] !== -2) continue
+        personFrom[st] = q
+        if (crew[i]) via[st] = f
+        queue.push(-(st + 1))
+      }
+    } else {
+      const st = -q - 1, slot = st % 3, cp = Math.floor(st / 3), c = Math.floor(cp / P), p = cp % P
+      const fs = g.pf[p], crew = g.pcrew[p], v = via[st]
+      for (let i = 0; i < fs.length; i++) {
+        const next = Math.min(need, c + +(slot > 0 && crew[i] && fs[i] !== v)) * F + fs[i]
+        if (filmFrom[next] !== -2) continue
+        filmFrom[next] = st
+        queue.push(next)
       }
     }
   }

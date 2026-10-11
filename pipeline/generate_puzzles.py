@@ -50,10 +50,11 @@ LANG_NAMES = {"hi": "Hindi", "ta": "Tamil", "te": "Telugu", "ml": "Malayalam", "
               "mr": "Marathi", "bn": "Bengali", "pa": "Punjabi", "gu": "Gujarati"}
 
 # The weekly ladder (Mon=0 … Sun=6). Well-known films sit only 2-3 links apart, so length alone can't make
-# a hard puzzle: midweek benches the most-connected people, and the weekend allows only directors and
-# composers, which stretches chains to 3-5 links and rewards knowing who made what.
+# a hard puzzle: midweek benches the most-connected people, and the weekend's Crew Call makes the chain
+# pass through crew links (a director or composer on the films either side), rewarding knowing who made what.
 PAR_BY_WEEKDAY = [3, 3, 3, 3, 4, 4, 4]
 RULE_BY_WEEKDAY = [None, None, "nostars", "nostars", "crew", "crew", "crew"]
+CREW_MIN_BY_WEEKDAY = [0, 0, 0, 0, 1, 1, 2]  # crew links a Crew Call chain must make
 STAR_BENCH = 1000        # "No Superstars": this many most-connected people can't be used
 CREW_ROLES = {"Director", "Music"}
 # Acceptable number of distinct shortest routes, by weekday: forgiving early, tight at the weekend.
@@ -134,6 +135,7 @@ class Graph:
             "nomusic": np.array([bool(self.roles[e] - {"Music"}) for e in edges]),
         }
         self._crew = np.array([bool(self.roles[e] & CREW_ROLES) for e in edges])
+        self._crew_e = np.flatnonzero(self._crew)
         # People with at least this many films sit out a "No Superstars" day; the app applies the same cut.
         self.ban = int(np.sort(degree)[::-1][STAR_BENCH - 1])
         self._rule_cache: dict = {}
@@ -177,9 +179,12 @@ class Graph:
         age = np.array([0.8 if (y or 0) < 1975 else 1.0 for y in self.year])
         self.familiarity = (0.5 * self.lang_pct + 0.5 * pct(self.star)) * age
 
-    def rule_mats(self, rule: str | None, ban: int | None = None) -> dict:
-        """Incidence matrices (all, fair, nohub, nomusic) keeping only the credits a day's rule allows."""
-        key = (rule, ban)
+    def rule_mats(self, rule: str | None, ban: int | None = None, need: int | None = None) -> dict:
+        """Incidence matrices (all, fair, nohub, nomusic) keeping only the credits a day's rule allows.
+        Each is a pair (B: film x person, person -> film steps; Bt: person x film, film -> person steps)."""
+        key = (rule, ban, need)
+        if key not in self._rule_cache and rule == "crew" and need:
+            self._rule_cache[key] = {k: self._crew_mats(v, need) for k, v in self._keeps.items()}
         if key not in self._rule_cache:
             if rule == "nostars":
                 allow = self.degree[self._cols] < (ban or self.ban)
@@ -196,6 +201,47 @@ class Graph:
             self._rule_cache[key] = {k: mat(v) for k, v in self._keeps.items()}
         return self._rule_cache[key]
 
+    def _crew_mats(self, keep: np.ndarray, need: int):
+        """Crew Call (anyone links, but the chain needs `need` crew links) as a layered graph, so plain BFS
+        and route counting still work. Film f with n crew links made is node f + F*n. A person reached with
+        n made is p + Q*n, or, if they came in through a director/music credit on film f, a node of their
+        own for that credit, P + i + Q*n (Q = P + crew credits). Leaving that node through a crew credit on
+        another film is a crew link, a step up a layer; films with `need` made are the last layer."""
+        F, P = self._shape
+        crew_e = self._crew_e
+        pos = np.full(len(self._crew), -1)
+        pos[crew_e] = np.arange(len(crew_e))
+        Q = P + len(crew_e)
+        kept = np.flatnonzero(keep)
+        r, c = self._rows[kept], self._cols[kept]
+        # Through a person: (crew credit i they came in by, kept credit k they leave by) on the same person.
+        entry = sparse.csr_matrix((np.ones(len(crew_e)), (np.arange(len(crew_e)), self._cols[crew_e])), shape=(len(crew_e), P))
+        leave = sparse.csr_matrix((np.ones(len(kept)), (c, np.arange(len(kept)))), shape=(P, len(kept)))
+        via = (entry @ leave).tocoo()
+        g, from_f = r[via.col], self._rows[crew_e][via.row]
+        gain = (self._crew[kept][via.col] & (g != from_f)).astype(int)
+        down_r, down_c, up_r, up_c = [], [], [], []
+        for n in range(need + 1):
+            down_r.append(Q * n + np.where(self._crew[kept], P + pos[kept], c))
+            down_c.append(F * n + r)
+            up_r += [F * n + r, F * np.minimum(need, n + gain) + g]
+            up_c += [Q * n + c, Q * n + P + via.row]
+        cat = np.concatenate
+        shape = (F * (need + 1), Q * (need + 1))
+        B = sparse.csr_matrix((np.ones(sum(map(len, up_r))), (cat(up_r), cat(up_c))), shape=shape)
+        Bt = sparse.csr_matrix((np.ones(sum(map(len, down_r))), (cat(down_r), cat(down_c))), shape=shape[::-1])
+        return B, Bt
+
+    def person_of(self, mats: dict, n: int) -> int:
+        """The person a (possibly layered) person node in `mats` stands for."""
+        Q = mats["all"][0].shape[1] // (mats["all"][0].shape[0] // len(self.fids))
+        n %= Q
+        return n if n < len(self.pids) else int(self._cols[self._crew_e[n - len(self.pids)]])
+
+    def goal(self, mats: dict) -> int:
+        """Offset of the target films' layer in `mats`: 0, or the crew-links-made layer on a Crew Call day."""
+        return mats["all"][0].shape[0] - len(self.fids)
+
     def people_of(self, f: int) -> np.ndarray:
         return self.B.indices[self.B.indptr[f]:self.B.indptr[f + 1]]
 
@@ -208,7 +254,7 @@ class Graph:
         avoiding hubs, avoiding music."""
         mats = mats or self.mats
         B_all, Bt_all = mats["all"]
-        F, P = len(self.fids), len(self.pids)
+        F, P = B_all.shape
         dist_f = np.full(F, -1, np.int16)
         dist_p = np.full(P, -1, np.int16)
         dist_f[s] = 0
@@ -256,8 +302,11 @@ class Graph:
                     if len(out) >= MAX_ROUTES:
                         return
 
+        e += self.goal(mats or self.mats)
         back(e, int(dist_f[e]), [])
-        return out
+        # Back from layered nodes to the films and people they stand for.
+        F, m = len(self.fids), mats or self.mats
+        return [[self.person_of(m, n) if i % 2 else n % F for i, n in enumerate(r)] for r in out]
 
     def is_fair(self, route: list[int]) -> bool:
         return all((route[j], route[i]) in self.fair for i in range(1, len(route), 2) for j in (i - 1, i + 1))
@@ -411,10 +460,11 @@ class Scheduler:
         routes = G.routes(s, e, dist_f, dist_p, self.rng, mats)
         carrier = Counter(p for r in routes for p in r[1::2]).most_common(1)[0][0]
         spot = G.spot(routes)
+        g = e + G.goal(mats or G.mats)
         return {
             "routes": routes, "carrier": carrier, "spot": spot,
             "alts": G.alternates(routes, published=published),
-            "total": counts["all"][e], "fair": counts["fair"][e], "nohub": counts["nohub"][e],
+            "total": counts["all"][g], "fair": counts["fair"][g], "nohub": counts["nohub"][g],
         }
 
     def record(self, day: int, s: int, e: int, carrier: int) -> None:
@@ -422,7 +472,8 @@ class Scheduler:
         self.carrier_used[carrier] = day
         self.recent_langs += [(day, self.G.lang[s]), (day, self.G.lang[e])]
 
-    def puzzle(self, s: int, e: int, info: dict, theme: str | None, rule: str | None = None, ban: int | None = None) -> dict:
+    def puzzle(self, s: int, e: int, info: dict, theme: str | None, rule: str | None = None, ban: int | None = None,
+               need: int | None = None) -> dict:
         G = self.G
         par = int((len(info["routes"][0]) - 1) // 2)
         pz = {"s": G.fids[s], "e": G.fids[e], "par": par, "d": difficulty(par, info["total"], info["fair"], rule)}
@@ -432,6 +483,8 @@ class Scheduler:
             pz["rule"] = rule
         if rule == "nostars":
             pz["ban"] = ban
+        if rule == "crew" and need:
+            pz["min"] = need
         if info["spot"]:
             _, p, text = info["spot"]
             pz["spot"] = {"p": G.pids[p], "t": text}
@@ -440,20 +493,20 @@ class Scheduler:
         return pz
 
     def fixed(self, day: int, s_id: str, e_id: str, theme: str | None, rule: str | None = None, ban: int | None = None,
-              published: bool = False) -> dict | None:
+              need: int | None = None, published: bool = False) -> dict | None:
         """A known pair (already published, or a hand-picked override), re-verified on the current graph
-        under the rule it was published with."""
+        under the rule it was published with (a Crew Call without `need` is the old directors-and-composers-only one)."""
         G = self.G
         if s_id not in G.fi or e_id not in G.fi:
             return None
         s, e = G.fi[s_id], G.fi[e_id]
-        mats = G.rule_mats(rule, ban)
+        mats = G.rule_mats(rule, ban, need)
         dist_f, dist_p, counts = G.forward(s, mats)
-        if dist_f[e] < 1:
+        if dist_f[e + G.goal(mats)] < 1:
             return None
         info = self.describe(s, e, dist_f, dist_p, counts, mats, published)
         self.record(day, s, e, info["carrier"])
-        return self.puzzle(s, e, info, theme, rule, ban)
+        return self.puzzle(s, e, info, theme, rule, ban, need)
 
     def pick(self, day: int) -> dict:
         G, rng = self.G, self.rng
@@ -475,7 +528,8 @@ class Scheduler:
             tries.append((None, None))
         for theme, rule in tries:
             ban = G.ban if rule == "nostars" else None
-            mats = G.rule_mats(rule, ban)
+            need = CREW_MIN_BY_WEEKDAY[d.weekday()] if rule == "crew" else None
+            mats = G.rule_mats(rule, ban, need)
             cands = self._candidates(day, d, theme, fresh, fresh_arr, want, lo, hi, recent, mats)
             if cands:
                 break
@@ -492,7 +546,7 @@ class Scheduler:
             best["info"]["routes"] = [r[::-1] for r in best["info"]["routes"]]
             best["info"]["alts"] = [r[::-1] for r in best["info"]["alts"]]
         self.record(day, s, e, best["info"]["carrier"])
-        pz = self.puzzle(s, e, best["info"], label, rule, ban)
+        pz = self.puzzle(s, e, best["info"], label, rule, ban, need)
         self.review.append({"date": d, "pz": pz, "best": best, "runners": cands[1:3]})
         return pz
 
@@ -514,13 +568,15 @@ class Scheduler:
         for s in rng.sample(starts_from, min(STARTS_PER_DAY, len(starts_from))):
             dist_f, dist_p, counts = G.forward(s, mats)
             ends = fresh_arr[fresh_arr != s]
-            dist = dist_f[ends].astype(float)
-            total = counts["all"][ends]
-            ok = (dist >= 2) & (counts["fair"][ends] >= 1)
+            # Distances and route counts to each end, in the layer where the day's rule is met.
+            at = ends + G.goal(mats)
+            dist = dist_f[at].astype(float)
+            total = counts["all"][at]
+            ok = (dist >= 2) & (counts["fair"][at] >= 1)
             if theme and theme[0] == "decade":
                 ok &= np.array([theme_film_ok(G, theme, f, d) for f in ends])
             if theme and theme[0] == "composer":
-                ok &= (total - counts["nomusic"][ends]) >= 1
+                ok &= (total - counts["nomusic"][at]) >= 1
             if not ok.any():
                 continue
             # The weekday's chain length is a requirement, not a preference: famous films are nearly
@@ -528,7 +584,7 @@ class Scheduler:
             # nearest length this start can actually reach.
             gap = np.where(ok, np.abs(dist - want), np.inf)
             ok &= gap == gap.min()
-            hub_share = 1 - counts["nohub"][ends] / np.maximum(total, 1)
+            hub_share = 1 - counts["nohub"][at] / np.maximum(total, 1)
             # Where the chain can't be as long as the day wants (within one language it rarely can),
             # make it harder another way: insist on few shortest routes and few findable ones.
             short = np.maximum(0, want - dist)
@@ -536,9 +592,9 @@ class Scheduler:
                 -1.5 * np.abs(dist - want)
                 + 4.0 * (self.fam[s] + self.fam[ends]) / 2
                 + (1 + 2.5 * short) * band_score(total, lo, hi)
-                + short * band_score(counts["fair"][ends], 1, max(1, lo // 2))
+                + short * band_score(counts["fair"][at], 1, max(1, lo // 2))
                 - 2.0 * np.maximum(0, hub_share - 0.5)
-                + 0.5 * counts["fair"][ends] / np.maximum(total, 1)
+                + 0.5 * counts["fair"][at] / np.maximum(total, 1)
             )
             if self.track == "all":
                 langs = np.array([G.lang[f] for f in ends])
@@ -577,7 +633,7 @@ def build_track(G: Graph, track: str, args, overrides: dict) -> Scheduler:
         if old.get("epoch") == args.epoch:
             keep_days = (date.fromisoformat(args.keep_until) - epoch).days + 1
             for day, p in enumerate(old["puzzles"][:max(0, keep_days)]):
-                pz = sch.fixed(day, p["s"], p["e"], p.get("theme"), p.get("rule"), p.get("ban"), published=True)
+                pz = sch.fixed(day, p["s"], p["e"], p.get("theme"), p.get("rule"), p.get("ban"), p.get("min"), published=True)
                 if not pz:
                     break
                 puzzles.append(pz)
@@ -664,7 +720,7 @@ def write_landing(g: dict, ban_by_day: dict | None = None) -> None:
         def allowed(pid: str, role: str) -> bool:
             if rule == "nostars":
                 return len(films_of.get(pid, ())) < ban
-            if rule == "crew":
+            if rule == "crew" and not pz.get("min"):
                 return role != "Actor"
             return True
 

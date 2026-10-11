@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { creditOk, isValidChain, knownFor, linkCount, nodeLabel, shortestPath, type Index, type Node, type Role, type Rule } from '../lib/graph'
-import { RULES, difficultyOf, localDateKey, msToMidnight, ruleOf, type PuzzleDef } from '../lib/daily'
+import { creditOk, crewLink, crewLinks, crewNeeded, isValidChain, knownFor, linkCount, nodeLabel, shortestOnward, shortestPath, type Index, type Node, type Role, type Rule } from '../lib/graph'
+import { RULES, difficultyOf, localDateKey, msToMidnight, ruleLine, ruleOf, type PuzzleDef } from '../lib/daily'
 import { IMG, clock, langName } from '../lib/format'
 import { MAX_SECONDS, collectCast, isRareRoute, ratingFor, scoreFor, type Progress, type Result, type ScoreParts } from '../lib/storage'
 import { Avatar, Filmstrip, Icon, LangTag, ParMeter, Poster, Stamp } from './Bits'
@@ -95,6 +95,12 @@ export default function Game(props: Props) {
 
   const current = path[path.length - 1]
   const links = linkCount(path)
+  // Crew Call: the chain must make this many crew links before reaching the target counts.
+  const crewNeed = crewNeeded(rule)
+  const crewMade = crewNeed ? crewLinks(idx, path) : 0
+  /** Whether picking this film from the current person makes a crew link. */
+  const makesCrewLink = (filmId: string) =>
+    crewNeed > 0 && current.kind === 'person' && path.length > 1 && crewLink(idx, path[path.length - 2].id, current.id, filmId)
   // The "one tap from the target" rings are a lifeline, not a guide: they appear only once the
   // player has spent the shortest chain's links and is behind. Hard mode never shows them.
   const assist = !hard && links >= puzzle.par
@@ -217,13 +223,13 @@ export default function Game(props: Props) {
     setHint(null)
     setQuery('')
     listRef.current?.scrollTo({ top: 0 })
-    if (node.kind === 'film' && node.id === puzzle.e) finish(next, false)
+    if (node.kind === 'film' && node.id === puzzle.e && crewLinks(idx, next) >= crewNeed) finish(next, false)
   }
 
   function takeHint() {
     // The hint for this step is already on screen; a second tap must not charge for it again.
     if (hint) return
-    const sp = shortestPath(idx, current, puzzle.e, rule)
+    const sp = shortestOnward(idx, path, puzzle.e, rule)
     if (sp && sp[1]) {
       setHint(sp[1])
       setHints((h) => h + 1)
@@ -281,7 +287,15 @@ export default function Game(props: Props) {
 
           {rule && (
             <p className={`rule-strip is-${rule.kind}`} role="note">
-              <b>{RULES[rule.kind].name}.</b> {RULES[rule.kind].line}
+              <b>{RULES[rule.kind].name}.</b> {ruleLine(rule)}
+              {crewNeed > 0 && (
+                <span className={`rule-crew ${crewMade >= crewNeed ? 'is-done' : ''}`}>
+                  {' '}{crewMade >= crewNeed ? <Icon name="check" size={13} /> : null}
+                  Crew links: <b>{Math.min(crewMade, crewNeed)}/{crewNeed}</b>
+                  {current.kind === 'film' && current.id === puzzle.e && crewMade < crewNeed
+                    && <> · You’ve reached {films[puzzle.e].t}, but the chain still needs {crewNeed - crewMade} more. Keep going.</>}
+                </span>
+              )}
               {benched > 0 && <> <span className="rule-benched">{benched} {benched === 1 ? 'person' : 'people'} here can’t be used.</span></>}
             </p>
           )}
@@ -371,7 +385,9 @@ export default function Game(props: Props) {
                       {visible.map((o, i) => (
                         <FilmCard
                           key={o.node.id + o.role} idx={idx} id={o.node.id} role={o.role} i={i}
-                          used={inPath.has(`film:${o.node.id}`)} target={o.node.id === puzzle.e} hint={isHint(o.node)}
+                          used={inPath.has(`film:${o.node.id}`)} hint={isHint(o.node)}
+                          target={o.node.id === puzzle.e && crewMade + +makesCrewLink(o.node.id) >= crewNeed}
+                          crew={makesCrewLink(o.node.id)}
                           onPick={(el) => go(o.node, el)}
                         />
                       ))}
@@ -472,9 +488,11 @@ function PersonCard({
 }
 
 function FilmCard({
-  idx, id, role, i, used, target, hint, onPick,
+  idx, id, role, i, used, target, hint, crew, onPick,
 }: {
   idx: Index; id: string; role: Role; i: number; used: boolean; target: boolean; hint: boolean
+  /** Picking this film makes a Crew Call crew link. */
+  crew?: boolean
   onPick: (el: HTMLElement) => void
 }) {
   const f = idx.data.films[id]
@@ -492,7 +510,8 @@ function FilmCard({
         <CardFlag win={target} used={used && !target} hint={hint} />
       </span>
       <span className="card-name">{f.t}{idx.sharedTitle.has(id) && <TitleLang l={f.l} />}</span>
-      <span className="sr-only">{target ? 'the target' : ''}{hint ? ', hint' : ''}</span>
+      {crew && <span className="card-crew">Crew link</span>}
+      <span className="sr-only">{target ? 'the target' : ''}{hint ? ', hint' : ''}{crew ? ', makes a crew link' : ''}</span>
     </button>
   )
 }

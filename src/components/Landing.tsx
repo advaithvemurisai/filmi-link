@@ -5,7 +5,7 @@ import Credits from './Credits'
 import Walkthrough from './Walkthrough'
 import { MIN_START_FACES, startFaces, type Index } from '../lib/graph'
 import type { LandingPreview } from '../App'
-import { RULES, difficultyOf, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from '../lib/daily'
+import { RULES, difficultyOf, ruleLine, puzzleFor, puzzleNumber, ruleOf, type PuzzleFile } from '../lib/daily'
 
 interface Props {
   idx: Index | null
@@ -107,7 +107,7 @@ export default function Landing({ idx: full, preview, file, today, challenge, on
         {ready && faces.length > 0 && (
           <div className="bill-start">
             <p><span className="step-no">1</span> Pick a connector from <b>{idx.data.films[puzzle.s].t}</b>
-              {puzzle.rule ? <> — <b>{RULES[puzzle.rule].name}:</b> {RULES[puzzle.rule].line}</> : ' — directors, composers and actors all count.'}</p>
+              {puzzle.rule ? <> — <b>{RULES[puzzle.rule].name}:</b> {ruleLine(ruleOf(puzzle)!)}</> : ' — directors, composers and actors all count.'}</p>
             <ul className="bill-faces">
               {faces.map((c, i) => (
                 <li key={c.id} style={{ animationDelay: `${300 + i * 50}ms` }}>
