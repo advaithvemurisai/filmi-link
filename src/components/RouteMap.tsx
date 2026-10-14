@@ -24,23 +24,37 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
     const counts = new Map<string, number>()
     for (const r of routes) for (const n of new Set(r.path.map(key))) counts.set(n, (counts.get(n) ?? 0) + 1)
 
-    // Positions are slots along the longest route, so a short route stretches to span the same distance.
+    // Positions are slots along the longest route; the others stretch to span the same distance.
     const longest = Math.max(...routes.map((r) => r.path.length))
-    const slotOf = (i: number, len: number) => ((longest - 1) * i) / Math.max(1, len - 1)
     const spots = new Map<string, { node: Node; slot: number; lane: number; shared: boolean; order: number }>()
     // A loop revisits a stop; each revisit gets its own spot, or it would be averaged on top of its neighbours.
     const spotKeys = routes.map((r) => {
       const seen = new Set<string>()
       return r.path.map((n, i) => (seen.has(key(n)) ? `${key(n)}#${i}` : (seen.add(key(n)), key(n))))
     })
+    const main = routes.reduce((a, b) => (b.path.length > a.path.length ? b : a))
+    const mainSlot = new Map(spotKeys[routes.indexOf(main)].map((k, i) => [k, i]))
     routes.forEach((r, ri) => {
+      // Stops shared with the longest route keep its slot; the rest are spread evenly between them,
+      // so neither route ever runs backwards. (Averaging the two positions could put a shared stop
+      // behind the next one on the longer route.)
+      const anchors: [number, number][] = []
+      spotKeys[ri].forEach((k, i) => {
+        const at = mainSlot.get(k)
+        const last = anchors[anchors.length - 1]
+        if (at !== undefined && (!last || at > last[1]) && (i === r.path.length - 1 || at < longest - 1)) anchors.push([i, at])
+      })
+      if (anchors[0]?.[0] !== 0) anchors.unshift([0, 0])
+      if (anchors[anchors.length - 1][0] !== r.path.length - 1) anchors.push([r.path.length - 1, longest - 1])
+      let a = 0
       r.path.forEach((n, i) => {
+        while (anchors[a + 1] && anchors[a + 1][0] < i) a++
+        const [i0, s0] = anchors[a]
+        const [i1, s1] = anchors[a + 1] ?? anchors[a]
+        const slot = i1 === i0 ? s0 : s0 + ((s1 - s0) * (i - i0)) / (i1 - i0)
         const k = spotKeys[ri][i]
         const shared = k === key(n) && (counts.get(k) ?? 0) > 1
-        const prev = spots.get(k)
-        const slot = slotOf(i, r.path.length)
-        if (prev) prev.slot = (prev.slot + slot) / 2
-        else spots.set(k, { node: n, slot, lane: shared ? 0 : r.lane, shared, order: i })
+        if (!spots.has(k)) spots.set(k, { node: n, slot, lane: shared ? 0 : r.lane, shared, order: i })
       })
     })
     const edges = routes.flatMap((r, ri) =>

@@ -31,7 +31,7 @@ const routeFromPath = (): Route => (location.pathname.slice(BASE.length).startsW
 export interface Challenge { lang: string | null; no: number; links: number; mids: string[] }
 function parseChallenge(): Challenge | null {
   // An optional leading language (`te.39-2…`) points at a home-cinema daily instead of the India one.
-  const m = /^(?:([a-z]{2})\.)?(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,23})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
+  const m = /^(?:([a-z]{2})\.)?(\d{1,5})-(\d{1,2})((?:\.\d{1,9}){0,197})$/.exec(new URLSearchParams(location.search).get('c') ?? '')
   if (!m || (m[1] && !HOME_LANGS.includes(m[1]))) return null
   return { lang: m[1] ?? null, no: Number(m[2]), links: Number(m[3]), mids: m[4] ? m[4].slice(1).split('.') : [] }
 }
@@ -287,13 +287,18 @@ export default function App() {
   const lastPlayed = Object.keys(results).reduce((m, d) => (results[d].live && d > m ? d : m), '')
   useEffect(() => reportPlayed({ last: lastPlayed, streak }), [lastPlayed, streak])
   // A challenge points at one daily (India's or a home cinema's), today's or an earlier one; the friend's chain is rebuilt from the graph.
-  const challenge = (() => {
+  // The link opens its puzzle even when the friend's score is too long to show as a challenge.
+  const challengeDay = (() => {
     if (!CHALLENGE || !file) return null
     const cFile = CHALLENGE.lang ? (homeLang === CHALLENGE.lang ? homeFile : null) : file
     if (!cFile) return null
     const date = addDays(cFile.epoch, CHALLENGE.no - 1)
     const pz = date <= today ? puzzleFor(cFile, date) : null
-    if (!pz || !validChallenge(CHALLENGE.links, pz.par)) return null
+    return pz ? { date, pz, track: (CHALLENGE.lang ?? 'all') as Track } : null
+  })()
+  const challenge = (() => {
+    if (!CHALLENGE || !challengeDay || !validChallenge(CHALLENGE.links, challengeDay.pz.par)) return null
+    const { date, pz, track } = challengeDay
     let path: Node[] | null = null
     if (idx && CHALLENGE.mids.length === CHALLENGE.links * 2 - 1) {
       const full: Node[] = [
@@ -303,15 +308,15 @@ export default function App() {
       ]
       if (isValidChain(idx, full, pz.s, pz.e) && linkCount(full) === CHALLENGE.links) path = full
     }
-    return { date, links: CHALLENGE.links, path, track: (CHALLENGE.lang ?? 'all') as Track }
+    return { date, links: CHALLENGE.links, path, track }
   })()
-  const playDate = challenge?.date ?? today
+  const playDate = challengeDay?.date ?? today
 
   // Arriving from a link to an earlier puzzle: open that one instead of today's.
   useEffect(() => {
-    if (challenge && (challenge.date !== today || challenge.track !== 'all')) setMode({ kind: 'daily', date: challenge.date, track: challenge.track })
+    if (challengeDay && (challengeDay.date !== today || challengeDay.track !== 'all')) setMode({ kind: 'daily', date: challengeDay.date, track: challengeDay.track })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!challenge])
+  }, [!!challengeDay])
 
   /** Start today's daily from the landing page with a first person already picked. */
   const startFrom = (personId: string) => {

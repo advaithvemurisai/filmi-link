@@ -268,7 +268,8 @@ nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 
 /* ---------- toolbar ---------- */
 .toolbar { display: flex; align-items: center; gap: 12px; margin: 16px 2px 8px; flex-wrap: wrap; }
-.par-meter { display: inline-flex; align-items: center; gap: 5px; }
+/* A long detour wraps its pips onto more rows instead of widening the result card past the screen. */
+.par-meter { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 5px; max-width: 100%; }
 .pip { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: transparent; transition: background .3s, border-color .3s; }
 .pip.is-used { background: var(--text); border-color: var(--text); animation: pop .35s ease-out; }
 .pip.is-over { background: var(--t-flop); border-color: var(--t-flop); animation: pop .35s ease-out; }
@@ -444,7 +445,7 @@ div.face .avatar { opacity: .85; }
 .result > *, .modal-body > * { min-width: 0; }
 .result.is-gold { border-color: color-mix(in srgb, var(--t-blockbuster) 55%, var(--line)); }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
-.verdict { display: grid; justify-items: center; gap: 12px; text-align: center; padding-top: 6px; }
+.verdict { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 12px; text-align: center; padding-top: 6px; }
 .verdict h2 { font-size: 28px; max-width: 520px; }
 .result-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .result-chips span { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }

@@ -29,7 +29,7 @@ export type Friend = { links: number; path: Node[] | null }
  */
 export interface FreeLink { s: string; e: string; links: number | null; mids: string[] }
 export function parseFreeLink(search: string): FreeLink | null {
-  const m = /^(\d{1,9})\.(\d{1,9})(?:-(\d{1,2})((?:\.\d{1,9}){0,23}))?$/.exec(new URLSearchParams(search).get('r') ?? '')
+  const m = /^(\d{1,9})\.(\d{1,9})(?:-(\d{1,2})((?:\.\d{1,9}){0,197}))?$/.exec(new URLSearchParams(search).get('r') ?? '')
   return m ? { s: m[1], e: m[2], links: m[3] ? Number(m[3]) : null, mids: m[4] ? m[4].slice(1).split('.') : [] } : null
 }
 /** Rebuild a shared free-play puzzle from the graph; null if the films are gone or no longer connect. */

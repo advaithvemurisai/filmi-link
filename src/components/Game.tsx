@@ -182,7 +182,15 @@ export default function Game(props: Props) {
     [idx, puzzle.e, rule],
   )
 
+  // Stepping straight back to the stop you came from goes nowhere and only costs a link,
+  // so it's only offered when it's the one way out (there's no undo).
+  const cameFrom = path.length > 1 ? path[path.length - 2].id : null
   const options = useMemo<Option[]>(() => {
+    const all = allOptions()
+    const onward = all.filter((o) => o.node.id !== cameFrom)
+    return onward.length ? onward : all
+  }, [current, cameFrom, idx, films, rule]) // eslint-disable-line react-hooks/exhaustive-deps
+  function allOptions(): Option[] {
     const usable = (personId: string, role: Role) => creditOk(idx, rule, personId, role)
     if (current.kind === 'film') {
       return [...(idx.filmCredits[current.id] ?? [])]
@@ -200,7 +208,7 @@ export default function Game(props: Props) {
     return [...best]
       .sort(([a], [b]) => (films[b].y ?? 0) - (films[a].y ?? 0))
       .map(([id, role]) => ({ node: { kind: 'film' as const, id }, role }))
-  }, [current, idx, films, rule])
+  }
   /** People on the current film the rule keeps out, so the player knows why they're missing. */
   const benched = current.kind === 'film' && rule
     ? new Set((idx.filmCredits[current.id] ?? []).filter((c) => !ok(c.id, c.role)).map((c) => c.id)).size
