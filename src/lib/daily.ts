@@ -12,15 +12,17 @@ export interface PuzzleDef {
   alts?: string[][]
   /** Generator's grade from chain length and how many (findable) shortest routes exist: 1 easy, 2 medium, 3 hard. */
   d?: number
-  /** The weekly ladder's rule for the day: 'nostars' (people with `ban`+ films can't be used) or 'crew'
+  /** The weekly ladder's rule for the day: 'nostars' (each industry's `stars` most famous leads can't be used;
+   * older puzzles bench people with `ban`+ films instead) or 'crew'
    * (the chain must make `min` crew links; without `min`, the old rule: no actors at all). */
   rule?: 'nostars' | 'crew'
   ban?: number
+  stars?: number
   min?: number
 }
 
 /** The day's rule as the graph helpers take it, or null on a normal day. */
-export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban, min: p.min } : null)
+export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban, stars: p.stars, min: p.min } : null)
 
 /** Name of each rule, for the stage, the landing page and share text. */
 export const RULES: Record<Rule['kind'], { name: string }> = {
@@ -30,7 +32,11 @@ export const RULES: Record<Rule['kind'], { name: string }> = {
 
 /** One-line explanation of the day's rule. */
 export function ruleLine(rule: Rule): string {
-  if (rule.kind === 'nostars') return 'The most-connected stars are benched today. Link through everyone else.'
+  if (rule.kind === 'nostars') {
+    return rule.stars
+      ? 'Each industry’s biggest leading stars are benched today. Link through everyone else.'
+      : 'The most-connected stars are benched today. Link through everyone else.'
+  }
   if (rule.min === undefined) return 'Only directors and music composers can link films today. No actors.'
   const links = rule.min === 1 ? 'one crew link' : `${rule.min} crew links`
   return `Actors count, but your chain needs ${links}: someone who directed or scored the films on both sides of them.`

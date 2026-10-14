@@ -55,7 +55,16 @@ LANG_NAMES = {"hi": "Hindi", "ta": "Tamil", "te": "Telugu", "ml": "Malayalam", "
 PAR_BY_WEEKDAY = [3, 3, 3, 3, 4, 4, 4]
 RULE_BY_WEEKDAY = [None, None, "nostars", "nostars", "crew", "crew", "crew"]
 CREW_MIN_BY_WEEKDAY = [0, 0, 0, 0, 1, 1, 2]  # crew links a Crew Call chain must make
-STAR_BENCH = 1000        # "No Superstars": this many most-connected people can't be used
+# "No Superstars" benches each industry's biggest leading stars, however short their filmography
+# (Prabhas has 27 films). Prolific character actors and crew aren't stars and stay in play.
+# Fame is the votes on films a person was billed in the top STAR_BILLING actors of, ranked per industry.
+# The app's starRanks() mirrors this exactly, so keep the two in step.
+# Puzzles published before this carry `ban` instead: people with that many films sat out.
+STAR_BENCH = 1000        # the old cut: this many most-connected people
+STAR_LANGS = ["hi", "ta", "te", "ml", "kn"]
+STARS_PER_LANG = 20
+STAR_BILLING = 2
+STAR_MIN_LEADS = 5       # leading roles needed to count, so one hit doesn't make a star
 CREW_ROLES = {"Director", "Music"}
 # Acceptable number of distinct shortest routes, by weekday: forgiving early, tight at the weekend.
 ROUTE_BAND = [(8, 120), (6, 90), (5, 60), (4, 45), (3, 30), (2, 20), (2, 14)]
@@ -86,6 +95,23 @@ LANG_TARGET = {"hi": 0.33, "ta": 0.18, "te": 0.17, "ml": 0.16, "kn": 0.1, "mr": 
 THEMES = {"all": ["released", "language", "decade", "composer", "crossover"], "lang": ["released", "decade", "composer", None]}
 SPOTLIGHT = ["ml", "ta", "te", "kn", "mr", "hi"]
 DECADES = [1990, 2000, 1980, 2010]
+
+
+def star_ranks(g: dict) -> dict[str, int]:
+    """Each lead's best fame rank (0 = most famous) across the STAR_LANGS industries."""
+    fame: dict[str, Counter] = {l: Counter() for l in STAR_LANGS}
+    leads: Counter = Counter()
+    for fid, rows in g["credits"].items():
+        for pid in dict.fromkeys([p for p, r in rows if r == "Actor"][:STAR_BILLING]):
+            leads[pid] += 1
+            if g["films"][fid]["l"] in fame:
+                fame[g["films"][fid]["l"]][pid] += g["films"][fid]["pop"]
+    ranks: dict[str, int] = {}
+    for votes in fame.values():
+        order = sorted((p for p in votes if leads[p] >= STAR_MIN_LEADS), key=lambda p: (-votes[p], p))
+        for i, pid in enumerate(order):
+            ranks[pid] = min(i, ranks.get(pid, i))
+    return ranks
 
 
 class Graph:
@@ -138,6 +164,8 @@ class Graph:
         self._crew_e = np.flatnonzero(self._crew)
         # People with at least this many films sit out a "No Superstars" day; the app applies the same cut.
         self.ban = int(np.sort(degree)[::-1][STAR_BENCH - 1])
+        ranks = star_ranks(g)
+        self.star_rank = np.array([ranks.get(p, 1 << 30) for p in self.pids])
         self._rule_cache: dict = {}
         self.mats = self.rule_mats(None)
         self.B, self.Bt = self.mats["all"]
@@ -179,15 +207,15 @@ class Graph:
         age = np.array([0.8 if (y or 0) < 1975 else 1.0 for y in self.year])
         self.familiarity = (0.5 * self.lang_pct + 0.5 * pct(self.star)) * age
 
-    def rule_mats(self, rule: str | None, ban: int | None = None, need: int | None = None) -> dict:
+    def rule_mats(self, rule: str | None, ban: int | None = None, need: int | None = None, stars: int | None = None) -> dict:
         """Incidence matrices (all, fair, nohub, nomusic) keeping only the credits a day's rule allows.
         Each is a pair (B: film x person, person -> film steps; Bt: person x film, film -> person steps)."""
-        key = (rule, ban, need)
+        key = (rule, ban, need, stars)
         if key not in self._rule_cache and rule == "crew" and need:
             self._rule_cache[key] = {k: self._crew_mats(v, need) for k, v in self._keeps.items()}
         if key not in self._rule_cache:
             if rule == "nostars":
-                allow = self.degree[self._cols] < (ban or self.ban)
+                allow = (self.star_rank[self._cols] >= stars) if stars else (self.degree[self._cols] < (ban or self.ban))
             elif rule == "crew":
                 allow = self._crew
             else:
@@ -473,7 +501,7 @@ class Scheduler:
         self.recent_langs += [(day, self.G.lang[s]), (day, self.G.lang[e])]
 
     def puzzle(self, s: int, e: int, info: dict, theme: str | None, rule: str | None = None, ban: int | None = None,
-               need: int | None = None) -> dict:
+               need: int | None = None, stars: int | None = None) -> dict:
         G = self.G
         par = int((len(info["routes"][0]) - 1) // 2)
         pz = {"s": G.fids[s], "e": G.fids[e], "par": par, "d": difficulty(par, info["total"], info["fair"], rule)}
@@ -482,7 +510,7 @@ class Scheduler:
         if rule:
             pz["rule"] = rule
         if rule == "nostars":
-            pz["ban"] = ban
+            pz.update({"stars": stars} if stars else {"ban": ban})
         if rule == "crew" and need:
             pz["min"] = need
         if info["spot"]:
@@ -493,20 +521,20 @@ class Scheduler:
         return pz
 
     def fixed(self, day: int, s_id: str, e_id: str, theme: str | None, rule: str | None = None, ban: int | None = None,
-              need: int | None = None, published: bool = False) -> dict | None:
+              need: int | None = None, published: bool = False, stars: int | None = None) -> dict | None:
         """A known pair (already published, or a hand-picked override), re-verified on the current graph
         under the rule it was published with (a Crew Call without `need` is the old directors-and-composers-only one)."""
         G = self.G
         if s_id not in G.fi or e_id not in G.fi:
             return None
         s, e = G.fi[s_id], G.fi[e_id]
-        mats = G.rule_mats(rule, ban, need)
+        mats = G.rule_mats(rule, ban, need, stars)
         dist_f, dist_p, counts = G.forward(s, mats)
         if dist_f[e + G.goal(mats)] < 1:
             return None
         info = self.describe(s, e, dist_f, dist_p, counts, mats, published)
         self.record(day, s, e, info["carrier"])
-        return self.puzzle(s, e, info, theme, rule, ban, need)
+        return self.puzzle(s, e, info, theme, rule, ban, need, stars)
 
     def pick(self, day: int) -> dict:
         G, rng = self.G, self.rng
@@ -527,9 +555,10 @@ class Scheduler:
         if day_rule:
             tries.append((None, None))
         for theme, rule in tries:
-            ban = G.ban if rule == "nostars" else None
+            ban = None
+            stars = STARS_PER_LANG if rule == "nostars" else None
             need = CREW_MIN_BY_WEEKDAY[d.weekday()] if rule == "crew" else None
-            mats = G.rule_mats(rule, ban, need)
+            mats = G.rule_mats(rule, ban, need, stars)
             cands = self._candidates(day, d, theme, fresh, fresh_arr, want, lo, hi, recent, mats)
             if cands:
                 break
@@ -546,7 +575,7 @@ class Scheduler:
             best["info"]["routes"] = [r[::-1] for r in best["info"]["routes"]]
             best["info"]["alts"] = [r[::-1] for r in best["info"]["alts"]]
         self.record(day, s, e, best["info"]["carrier"])
-        pz = self.puzzle(s, e, best["info"], label, rule, ban, need)
+        pz = self.puzzle(s, e, best["info"], label, rule, ban, need, stars)
         self.review.append({"date": d, "pz": pz, "best": best, "runners": cands[1:3]})
         return pz
 
@@ -633,7 +662,8 @@ def build_track(G: Graph, track: str, args, overrides: dict) -> Scheduler:
         if old.get("epoch") == args.epoch:
             keep_days = (date.fromisoformat(args.keep_until) - epoch).days + 1
             for day, p in enumerate(old["puzzles"][:max(0, keep_days)]):
-                pz = sch.fixed(day, p["s"], p["e"], p.get("theme"), p.get("rule"), p.get("ban"), p.get("min"), published=True)
+                pz = sch.fixed(day, p["s"], p["e"], p.get("theme"), p.get("rule"), p.get("ban"), p.get("min"), published=True,
+                               stars=p.get("stars"))
                 if not pz:
                     break
                 puzzles.append(pz)
@@ -707,6 +737,7 @@ def write_landing(g: dict, ban_by_day: dict | None = None) -> None:
         for pid, _ in rows:
             films_of.setdefault(pid, set()).add(fid)
     order = {"Director": 0, "Music": 1, "Actor": 2}
+    ranks = star_ranks(g)
     out = {"days": {}, "films": {}, "people": {}}
     today = date.today()
     for n in range(-1, LANDING_DAYS):
@@ -719,6 +750,8 @@ def write_landing(g: dict, ban_by_day: dict | None = None) -> None:
 
         def allowed(pid: str, role: str) -> bool:
             if rule == "nostars":
+                if pz.get("stars"):
+                    return ranks.get(pid, 1 << 30) >= pz["stars"]
                 return len(films_of.get(pid, ())) < ban
             if rule == "crew" and not pz.get("min"):
                 return role != "Actor"

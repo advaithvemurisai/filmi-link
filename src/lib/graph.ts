@@ -19,8 +19,10 @@ export interface Index {
   data: GraphData
   filmCredits: Record<string, Credit[]>
   personFilms: Record<string, Credit[]>
-  /** Distinct films per person (the generator's "degree", used by the No Superstars cut). */
+  /** Distinct films per person (the generator's "degree", used by the old No Superstars cut). */
   degree: Record<string, number>
+  /** Each leading star's best fame rank (0 = most famous) across the home industries; see `starRanks`. */
+  starRank: Record<string, number>
   /** Films whose title another film shares (e.g. Baby in Hindi and in Tamil): show their language. */
   sharedTitle: Set<string>
   /** People whose name another person shares (two Rekhas): show what they're known for. */
@@ -38,17 +40,50 @@ export function knownFor(idx: Index, personId: string): string | null {
   return best
 }
 
+// Mirrors star_ranks() in pipeline/generate_puzzles.py: change both together.
+const STAR_LANGS: ReadonlySet<string> = new Set(['hi', 'ta', 'te', 'ml', 'kn'])
+const STAR_BILLING = 2
+const STAR_MIN_LEADS = 5
+
 /**
- * A day's rule, from the weekly ladder. `nostars`: people with `ban` or more films sit the day out.
+ * Who counts as a superstar: fame is the votes on films a person was billed in the top two actors of,
+ * ranked within each home industry, for anyone with enough leading roles. Character actors and crew,
+ * however many films they've made, are never stars.
+ */
+function starRanks(data: GraphData): Record<string, number> {
+  const fame: Record<string, Map<string, number>> = {}
+  const leads = new Map<string, number>()
+  for (const [fid, rows] of Object.entries(data.credits)) {
+    const film = data.films[fid]
+    for (const pid of new Set(rows.filter(([, r]) => r === 'Actor').slice(0, STAR_BILLING).map(([p]) => p))) {
+      leads.set(pid, (leads.get(pid) ?? 0) + 1)
+      if (STAR_LANGS.has(film.l)) (fame[film.l] ??= new Map()).set(pid, (fame[film.l].get(pid) ?? 0) + film.pop)
+    }
+  }
+  const ranks: Record<string, number> = {}
+  for (const votes of Object.values(fame)) {
+    const order = [...votes.keys()]
+      .filter((p) => (leads.get(p) ?? 0) >= STAR_MIN_LEADS)
+      .sort((a, b) => votes.get(b)! - votes.get(a)! || (a < b ? -1 : a > b ? 1 : 0))
+    order.forEach((pid, i) => { ranks[pid] = Math.min(i, ranks[pid] ?? i) })
+  }
+  return ranks
+}
+
+/**
+ * A day's rule, from the weekly ladder. `nostars`: each industry's `stars` most famous leading stars sit
+ * the day out (puzzles from before that carry `ban` instead: people with that many films sat out).
  * `crew`: anyone can link films, but the chain must make at least `min` crew links (see `crewLink`).
  * A `crew` puzzle without `min` was published under the old rule, where only director and music credits link.
  */
-export interface Rule { kind: 'nostars' | 'crew'; ban?: number; min?: number }
+export interface Rule { kind: 'nostars' | 'crew'; ban?: number; stars?: number; min?: number }
 
 /** Whether one credit (a person in a role on some film) can be used under the day's rule. */
 export function creditOk(idx: Index, rule: Rule | null | undefined, personId: string, role: Role): boolean {
   if (!rule) return true
-  if (rule.kind === 'nostars') return (idx.degree[personId] ?? 0) < (rule.ban ?? Infinity)
+  if (rule.kind === 'nostars') {
+    return rule.stars ? (idx.starRank[personId] ?? Infinity) >= rule.stars : (idx.degree[personId] ?? 0) < (rule.ban ?? Infinity)
+  }
   return rule.min !== undefined || role !== 'Actor'
 }
 
@@ -92,7 +127,7 @@ export function buildIndex(data: GraphData): Index {
     return new Set([...seen.values()].filter((ids) => ids.length > 1).flat())
   }
   return {
-    data, filmCredits, personFilms, degree,
+    data, filmCredits, personFilms, degree, starRank: starRanks(data),
     sharedTitle: shared(Object.entries(data.films), (f) => f.t),
     sharedName: shared(Object.entries(data.people), (p) => p.n),
   }
