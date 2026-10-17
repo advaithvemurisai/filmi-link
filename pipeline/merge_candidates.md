@@ -20,7 +20,7 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - duplicate? [1497761](https://www.themoviedb.org/person/1497761): 2 films, ml, 1989–1991: Mookkilla Rajyathu, Varnam
 
 ## K. Chakravarthy: likely the same
-- canonical [933605](https://www.themoviedb.org/person/933605): 98 films, te, 1974–2023: Raja, Chantabbai, Superman
+- canonical [933605](https://www.themoviedb.org/person/933605): 99 films, te, 1974–2023: Raja, Chantabbai, Superman
 - duplicate? [3825541](https://www.themoviedb.org/person/3825541): 2 films, te, 1987–2000: Ninne Premistha, Samsaram Oka Chadarangam
 
 ## Raveendran: likely the same
@@ -39,14 +39,6 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [129731](https://www.themoviedb.org/person/129731): 59 films, hi, 1977–2023: Andaz Apna Apna, Maine Pyaar Kyun Kiya?, Hum Hain Rahi Pyar Ke
 - duplicate? [1869596](https://www.themoviedb.org/person/1869596): 1 films, hi, 2020–2020: Coolie No. 1
 
-## Seetha: likely the same
-- canonical [534184](https://www.themoviedb.org/person/534184): 55 films, ta, 1985–2025: Charlie, Happy, Thangamagan
-- duplicate? [2715464](https://www.themoviedb.org/person/2715464): 2 films, ta, 1996–1996: Hitler, Poovarasan
-
-## Manoj Pahwa: likely the same
-- canonical [85874](https://www.themoviedb.org/person/85874): 54 films, hi, 1996–2026: Main Tera Hero, Article 15, Cocktail
-- duplicate? [4153960](https://www.themoviedb.org/person/4153960): 1 films, hi, 2013–2013: Jolly LLB
-
 ## Mohan: likely the same
 - canonical [584359](https://www.themoviedb.org/person/584359): 51 films, ta, 1977–2024: The Greatest of All Time, Mouna Raagam, Vengayin Maindhan
 - duplicate? [2972364](https://www.themoviedb.org/person/2972364): 3 films, ta, 1976–1978: Kavikkuyil, Annakili, Chittu Kuruvi
@@ -55,53 +47,25 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [88812](https://www.themoviedb.org/person/88812): 50 films, hi, 1966–2026: Love Aaj Kal, Amar Akbar Anthony, Deewaar
 - duplicate? [2001005](https://www.themoviedb.org/person/2001005): 2 films, hi, 1979–2017: Sardar Saab, Aatish
 
-## Rammohan Sharma: likely the same
-- canonical [641165](https://www.themoviedb.org/person/641165): 29 films, hi, 1968–1997: Rangeela, Zanjeer, Amar Prem
-- duplicate? [4209213](https://www.themoviedb.org/person/4209213): 18 films, hi, 1954–2005: Maine Gandhi Ko Nahin Mara, Kyo Kii... Main Jhuth Nahin Bolta, Angoor
-
-## Vishwajeet Pradhan: likely the same
-- canonical [562226](https://www.themoviedb.org/person/562226): 43 films, hi, 1991–2025: Dhamaka, Phir Bhi Dil Hai Hindustani, Duplicate
-- duplicate? [4532227](https://www.themoviedb.org/person/4532227): 1 films, hi, 2001–2001: Gadar: Ek Prem Katha
-
 ## Mazhar Khan: likely the same
 - canonical [595888](https://www.themoviedb.org/person/595888): 27 films, hi, 1928–2000: Shaan, Arth, Gangvaa
 - duplicate? [5539223](https://www.themoviedb.org/person/5539223): 16 films, hi, 1931–1945: Gorakh Aya, Akela, Sohag
 
-## Vijaya Bhaskar: likely the same
-- canonical [4801010](https://www.themoviedb.org/person/4801010): 22 films, kn, 1963–1998: Naagarahaavu, Manasa Sarovara, Paduvaaralli Pandavaru
-- duplicate? [585265](https://www.themoviedb.org/person/585265): 18 films, kn, 1964–1995: Mathilukal, Vidheyan, Kathapurushan
-
-## Gope: likely the same
-- canonical [2616494](https://www.themoviedb.org/person/2616494): 37 films, hi, 1937–1958: Sharada, Chori Chori, Tarana
-- duplicate? [4209177](https://www.themoviedb.org/person/4209177): 2 films, hi, 1955–1955: Andher Nagari Chaupat Raja, Tonga-Wali
+## Saravanan: likely the same
+- canonical [586636](https://www.themoviedb.org/person/586636): 31 films, ta, 1993–2026: Raayan, Kolamavu Kokila, Gargi
+- duplicate? [2422548](https://www.themoviedb.org/person/2422548): 5 films, ta, 2012–2022: Ratsasan, Naan, Nenjuku Needhi
 
 ## Ravichandran: likely the same
 - canonical [584132](https://www.themoviedb.org/person/584132): 34 films, ta, 1964–2011: Arunachalam, Pammal K. Sambandam, Ramanaa
 - duplicate? [1332718](https://www.themoviedb.org/person/1332718): 2 films, ta, 2001–2016: Majunu, Natpadhigaram 79
 
-## Jayant: likely the same
-- canonical [1095284](https://www.themoviedb.org/person/1095284): 22 films, hi, 1937–1972: Madhumati, Yaar Mera, Himalay Ki Godmein
-- duplicate? [625436](https://www.themoviedb.org/person/625436): 13 films, hi, 1955–1986: Mera Gaon Mera Desh, Haqeeqat, Parakh
-
-## Saravanan: likely the same
-- canonical [586636](https://www.themoviedb.org/person/586636): 30 films, ta, 1993–2026: Raayan, Kolamavu Kokila, Gargi
-- duplicate? [2422548](https://www.themoviedb.org/person/2422548): 5 films, ta, 2012–2022: Ratsasan, Naan, Nenjuku Needhi
-
 ## Krishna Kumar: likely the same
-- canonical [1091301](https://www.themoviedb.org/person/1091301): 32 films, ml, 1994–2023: Kaavalan, Deiva Thirumagal, Run Baby Run
+- canonical [1091301](https://www.themoviedb.org/person/1091301): 33 films, ml, 1994–2023: Kaavalan, Deiva Thirumagal, Run Baby Run
 - duplicate? [4703272](https://www.themoviedb.org/person/4703272): 1 films, ml, 2024–2024: Aavesham
 
-## Asha Sachdev: likely the same
-- canonical [1041427](https://www.themoviedb.org/person/1041427): 30 films, hi, 1972–2000: Deewana, Fiza, Barsaat
-- duplicate? [4427531](https://www.themoviedb.org/person/4427531): 2 films, hi, 1977–2003: Stumped, Agent Vinod
-
 ## Saravanan: likely the same
-- canonical [586636](https://www.themoviedb.org/person/586636): 30 films, ta, 1993–2026: Raayan, Kolamavu Kokila, Gargi
+- canonical [586636](https://www.themoviedb.org/person/586636): 31 films, ta, 1993–2026: Raayan, Kolamavu Kokila, Gargi
 - duplicate? [1394676](https://www.themoviedb.org/person/1394676): 2 films, ta, 2014–2017: Love Guru, Murugatrupadai
-
-## Yakub: likely the same
-- canonical [4532808](https://www.themoviedb.org/person/4532808): 17 films, hi, 1933–1945: Najma, Thokar, Bulbul-e-Punjab
-- duplicate? [864334](https://www.themoviedb.org/person/864334): 14 films, hi, 1936–1957: Ab Dilli Dur Nahin, Nirala, Paying Guest
 
 ## Jayakrishnan: likely the same
 - canonical [1333293](https://www.themoviedb.org/person/1333293): 26 films, ml, 2002–2024: Pavada, Chandrolsavam, Pathaam Valavu
@@ -111,17 +75,9 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [53675](https://www.themoviedb.org/person/53675): 22 films, hi, 1996–2026: Rang De Basanti, Don 2, Dear Zindagi
 - duplicate? [231349](https://www.themoviedb.org/person/231349): 6 films, hi, 1978–2019: Singh Is Bliing, Panipat, Utsav
 
-## Biswajeet Chatterjee: likely the same
-- canonical [85373](https://www.themoviedb.org/person/85373): 25 films, hi, 1960–2009: Aa Dekhen Zara, Main Sunder Hoon, Bees Saal Baad
-- duplicate? [1610802](https://www.themoviedb.org/person/1610802): 3 films, hi, 1967–1968: Kismat, Nai Roshni, Night in London
-
 ## Ramakrishna: likely the same
 - canonical [579808](https://www.themoviedb.org/person/579808): 26 films, kn, 1971–2022: Babruvahana, Edegarike, Ravi Bopanna
 - duplicate? [4960846](https://www.themoviedb.org/person/4960846): 2 films, kn, 1984–2014: Makkaliralavva Manethumba, Super Ranga
-
-## Master Bhagwan: likely the same
-- canonical [1943583](https://www.themoviedb.org/person/1943583): 24 films, hi, 1956–1989: Kasme Vaade, Do Chor, College Girl
-- duplicate? [3241556](https://www.themoviedb.org/person/3241556): 2 films, hi, 1957–1975: Gateway of India, Naatak
 
 ## Shiva: likely the same
 - canonical [275257](https://www.themoviedb.org/person/275257): 23 films, ta, 2007–2025: Chennai 600028, Tamizh Padam 2, Saroja
@@ -132,12 +88,8 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - duplicate? [1830469](https://www.themoviedb.org/person/1830469): 11 films, ta, 1993–2025: Mugamoodi, Yuddham Sei, Eetti
 
 ## Vishal Mishra: likely the same
-- canonical [2156687](https://www.themoviedb.org/person/2156687): 20 films, hi, 2017–2026: Animal, Race 3, Qarib Qarib Singlle
+- canonical [2156687](https://www.themoviedb.org/person/2156687): 19 films, hi, 2017–2026: Race 3, Toxic: A Fairy Tale for Grown-ups, Qarib Qarib Singlle
 - duplicate? [1779844](https://www.themoviedb.org/person/1779844): 3 films, hi, 2017–2018: Coffee with D, Rosie: The Saffron Chapter, Hotel Milan
-
-## Bhudo Advani: likely the same
-- canonical [1890022](https://www.themoviedb.org/person/1890022): 21 films, hi, 1935–1969: Madhumati, Boot Polish, Khamoshi
-- duplicate? [4795891](https://www.themoviedb.org/person/4795891): 2 films, hi, 1938–1960: Kadu Makrani, Hum Tum Aur Woh
 
 ## Nazir: likely the same
 - canonical [2193345](https://www.themoviedb.org/person/2193345): 18 films, hi, 1932–1947: Zeenat, Gaon Ki Gori, Chandan
@@ -155,21 +107,13 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [85063](https://www.themoviedb.org/person/85063): 15 films, hi, 1992–2026: Delhi Belly, Jaane Tu... Ya Jaane Na, Ek Main Aur Ekk Tu
 - duplicate? [2361650](https://www.themoviedb.org/person/2361650): 3 films, hi, 2003–2007: Kismat, Big Brother, Hawa
 
-## Amir Banu: likely the same
-- canonical [1745446](https://www.themoviedb.org/person/1745446): 16 films, hi, 1943–1960: Aar Paar, Chori Chori, Jan Pahchan
-- duplicate? [2193352](https://www.themoviedb.org/person/2193352): 2 films, hi, 1945–1951: Jadoo, Ek Din Ka Sultan
-
-## Krishnakant: likely the same
-- canonical [1046599](https://www.themoviedb.org/person/1046599): 15 films, hi, 1942–1981: Sharmeelee, Howrah Bridge, Hotel
-- duplicate? [3330594](https://www.themoviedb.org/person/3330594): 3 films, hi, 1956–1986: Ajanabee, Dhola Maru, Teesra Kinara
-
-## Krishnakant: likely the same
-- canonical [1046599](https://www.themoviedb.org/person/1046599): 15 films, hi, 1942–1981: Sharmeelee, Howrah Bridge, Hotel
-- duplicate? [4129396](https://www.themoviedb.org/person/4129396): 3 films, hi, 1952–1975: Baadbaan, Vardaan, Zalzala
-
 ## Imran Khan: likely the same
 - canonical [85063](https://www.themoviedb.org/person/85063): 15 films, hi, 1992–2026: Delhi Belly, Jaane Tu... Ya Jaane Na, Ek Main Aur Ekk Tu
 - duplicate? [1516493](https://www.themoviedb.org/person/1516493): 2 films, hi, 2013–2015: Kajri, Four Pillars of Basement
+
+## Manmeet Singh: likely the same
+- canonical [141328](https://www.themoviedb.org/person/141328): 8 films, hi, 2008–2022: Rab Ne Bana Di Jodi, Band Baaja Baaraat, Bhoothnath Returns
+- duplicate? [2306281](https://www.themoviedb.org/person/2306281): 8 films, hi, 2010–2020: Jolly LLB 2, Baaghi, Dream Girl
 
 ## Manikandan: likely the same
 - canonical [1721513](https://www.themoviedb.org/person/1721513): 13 films, ta, 2013–2025: Jai Bhim, Vikram Vedha, Kaala
@@ -182,10 +126,6 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 ## Meera Nair: likely the same
 - canonical [2288334](https://www.themoviedb.org/person/2288334): 11 films, ml, 2018–2025: Njan Prakashan, Heaven, Makal
 - duplicate? [5796289](https://www.themoviedb.org/person/5796289): 4 films, ml, 2011–2024: Rathinirvedam, Thimiram, Kurukku
-
-## Masood Akhtar: likely the same
-- canonical [2367865](https://www.themoviedb.org/person/2367865): 8 films, hi, 1997–2025: Lantrani, Sherdil: The Pilibhit Saga, Chippa
-- duplicate? [35821](https://www.themoviedb.org/person/35821): 6 films, hi, 1984–2016: Chalte Chalte, Te3n, Raaz
 
 ## Amar: likely the same
 - canonical [4210986](https://www.themoviedb.org/person/4210986): 7 films, hi, 1941–1963: Sone Ki Chidiya, Phir Wohi Dil Laya Hoon, Doli
@@ -203,14 +143,6 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [4428280](https://www.themoviedb.org/person/4428280): 10 films, ta, 2015–2025: Maareesan, Bruce Lee, Miss You
 - duplicate? [1154654](https://www.themoviedb.org/person/1154654): 4 films, ta, 2014–2020: Kaala Koothu, Ennamo Nadakkudhu, Adavi
 
-## P C George: likely the same
-- canonical [4465772](https://www.themoviedb.org/person/4465772): 12 films, ml, 1977–1995: Ramji Rao Speaking, Innale, Irakal
-- duplicate? [1882137](https://www.themoviedb.org/person/1882137): 2 films, ml, 1979–2015: Aashamsakalode Anna, Kayalum Karayum
-
-## Manmeet Singh: likely the same
-- canonical [2306281](https://www.themoviedb.org/person/2306281): 7 films, hi, 2010–2020: Jolly LLB 2, Baaghi, Dream Girl
-- duplicate? [141328](https://www.themoviedb.org/person/141328): 6 films, hi, 2008–2022: Rab Ne Bana Di Jodi, Band Baaja Baaraat, Bhoothnath Returns
-
 ## Kapil Sharma: likely the same
 - canonical [1513214](https://www.themoviedb.org/person/1513214): 10 films, hi, 2010–2026: ABCD 2, Crew, Kis Kisko Pyaar Karoon
 - duplicate? [1158467](https://www.themoviedb.org/person/1158467): 3 films, hi, 2004–2013: Ab Tumhare Hawale Watan Saathiyo, I, Me aur Main, Dunno Y Na Jaane Kyun...
@@ -227,22 +159,6 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [1465132](https://www.themoviedb.org/person/1465132): 8 films, hi, 1935–1968: Mere Huzoor, Aaya Toofan, Chand Tara
 - duplicate? [2248183](https://www.themoviedb.org/person/2248183): 4 films, hi, 1955–1968: Professor & Jadugar, Badrinath Yatra, Garam Coat
 
-## Husn Banu: likely the same
-- canonical [5544904](https://www.themoviedb.org/person/5544904): 10 films, hi, 1934–1944: Hurricane Hansa, Fauladi Mukka, Hind Kesari
-- duplicate? [3474924](https://www.themoviedb.org/person/3474924): 2 films, hi, 1940–1954: Prem Nagar, Amar
-
-## Hemant Dhome: likely the same
-- canonical [1586791](https://www.themoviedb.org/person/1586791): 9 films, mr, 2015–2025: Jhimma, Fussclass Dabhade, Poshter Girl
-- duplicate? [2334646](https://www.themoviedb.org/person/2334646): 3 films, mr, 2010–2026: Kshanbhar Vishranti, Krantijyoti Vidyalay Marathi Madhyam, Choricha Mamla
-
-## Akashdeep Sabir: likely the same
-- canonical [120947](https://www.themoviedb.org/person/120947): 6 films, hi, 1999–2017: Ayan, Kavan, Santa Banta Pvt Ltd
-- duplicate? [3437107](https://www.themoviedb.org/person/3437107): 5 films, hi, 1974–2025: Jigra, Selfiee, Fateh
-
-## Shyam Kumar: likely the same
-- canonical [3042139](https://www.themoviedb.org/person/3042139): 8 films, hi, 1951–1974: Chor Machaye Shor, Shikar, Rustam Kaun ?
-- duplicate? [4331720](https://www.themoviedb.org/person/4331720): 3 films, hi, 1947–1957: Dulari, Naatak, Kath Putli
-
 ## Sandy: likely the same
 - canonical [2112010](https://www.themoviedb.org/person/2112010): 9 films, ta, 2021–2026: Leo, Lokah Chapter 1: Chandra, Parimala and Co
 - duplicate? [1445728](https://www.themoviedb.org/person/1445728): 2 films, ta, 2015–2019: Ivanukku Thannila Kandam, Thanimai
@@ -251,25 +167,13 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [539990](https://www.themoviedb.org/person/539990): 10 films, ta, 1998–2022: Naai Sekar Returns, Mappillai, Alex Pandian
 - duplicate? [4139991](https://www.themoviedb.org/person/4139991): 1 films, ta, 2002–2002: Kannathil Muthamittal
 
-## Pushkaraj Chirputkar: likely the same
-- canonical [3459875](https://www.themoviedb.org/person/3459875): 9 films, mr, 2022–2026: Like Aani Subscribe, Krantijyoti Vidyalay Marathi Madhyam, Medium Spicy
-- duplicate? [2728469](https://www.themoviedb.org/person/2728469): 2 films, mr, 2025–2025: Ashi Hi Jamva Jamvi, Arabian Nights
-
 ## Rajesh Kumar: likely the same
 - canonical [1336965](https://www.themoviedb.org/person/1336965): 8 films, hi, 2013–2026: Saiyaara, Teri Baaton Mein Aisa Uljha Jiya, Nishaanchi
 - duplicate? [989785](https://www.themoviedb.org/person/989785): 2 films, hi, 2024–2025: Rautu ka Raaz, Mannu Kya? Karegga
 
-## Sudha Chopra: likely the same
-- canonical [1539740](https://www.themoviedb.org/person/1539740): 6 films, hi, 1977–1993: Locket, Hum Rahe Na Hum, Teri Pooja Kare Sansaar
-- duplicate? [565175](https://www.themoviedb.org/person/565175): 4 films, hi, 1978–1981: Silsila, Sparsh, Griha Pravesh
-
 ## Premi: likely the same
 - canonical [1341178](https://www.themoviedb.org/person/1341178): 8 films, ta, 1975–1992: 16 Vayathinile, Endrum Anbudan, Kallukul Eeram
 - duplicate? [6478455](https://www.themoviedb.org/person/6478455): 2 films, ta, 1989–1990: Adhisaya Manithan, Naalai Manithan
-
-## Bhagwan Tiwari: likely the same
-- canonical [1469937](https://www.themoviedb.org/person/1469937): 8 films, hi, 1977–2022: Special 26, Masaan, Unda
-- duplicate? [6175597](https://www.themoviedb.org/person/6175597): 1 films, hi, 2020–2020: Chaman Bahaar
 
 ## Sanjay Sharma: likely the same
 - canonical [1418576](https://www.themoviedb.org/person/1418576): 7 films, hi, 1996–2024: 1920: Evil Returns, Haunted, Zanjeer
@@ -278,10 +182,6 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 ## Ahmed Khan: likely the same
 - canonical [81089](https://www.themoviedb.org/person/81089): 7 films, hi, 1989–2026: Baaghi 3, Baaghi 2, Welcome To The Jungle
 - duplicate? [2287622](https://www.themoviedb.org/person/2287622): 2 films, hi, 1988–1994: Qayamat Se Qayamat Tak, Madhosh
-
-## Bobby Darling: likely the same
-- canonical [88795](https://www.themoviedb.org/person/88795): 7 films, hi, 2001–2006: Chalte Chalte, Kyaa Kool Hai Hum, Style
-- duplicate? [1430626](https://www.themoviedb.org/person/1430626): 2 films, hi, 2005–2013: Navarasa, Super Model
 
 ## Tarun Ghosh: likely the same
 - canonical [3058380](https://www.themoviedb.org/person/3058380): 6 films, hi, 1969–1997: Chor Machaye Shor, Aap Ki Khatir, Khamoshi
@@ -299,17 +199,9 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [1337014](https://www.themoviedb.org/person/1337014): 7 films, ta, 2010–2018: Eetti, Pencil, Aravaan
 - duplicate? [1254185](https://www.themoviedb.org/person/1254185): 2 films, ta, 2006–2008: Em Magan, Muniyandi Vilangial Moonramandu
 
-## Komal Kumar: likely the same
-- canonical [1327539](https://www.themoviedb.org/person/1327539): 5 films, kn, 2002–2014: One Two Three, Aindhaam Thalaimurai Sidha Vaidhiya Sigamani, Lakshmi
-- duplicate? [2381327](https://www.themoviedb.org/person/2381327): 4 films, kn, 2005–2025: Aptharakshaka, Vamshi, Gowramma
-
 ## Sanjay Sharma: likely the same
 - canonical [1418576](https://www.themoviedb.org/person/1418576): 7 films, hi, 1996–2024: 1920: Evil Returns, Haunted, Zanjeer
 - duplicate? [4689233](https://www.themoviedb.org/person/4689233): 1 films, hi, 2007–2007: Dhan Dhana Dhan Goal
-
-## Arpana Choudhary: likely the same
-- canonical [1661921](https://www.themoviedb.org/person/1661921): 6 films, hi, 1972–1981: Don, Ponga Pandit, Zamaane ko Dikhana hai
-- duplicate? [3330593](https://www.themoviedb.org/person/3330593): 2 films, hi, 1974–1974: Trimurti, Bidaai
 
 ## Yusuf Khan: likely the same
 - canonical [2247798](https://www.themoviedb.org/person/2247798): 6 films, hi, 1972–1982: Amar Akbar Anthony, Disco Dancer, Muqaddar Ka Sikandar
@@ -318,14 +210,6 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 ## Mohit Chauhan: likely the same
 - canonical [4248619](https://www.themoviedb.org/person/4248619): 7 films, hi, 2010–2025: Sky Force, Soni, Monsoon Shootout
 - duplicate? [1430631](https://www.themoviedb.org/person/1430631): 1 films, hi, 2012–2012: Jannat 2
-
-## Gurinder Makna: likely the same
-- canonical [140644](https://www.themoviedb.org/person/140644): 6 films, pa, 2011–2025: Milestone, Anhey Ghorhey Da Daan, Vash
-- duplicate? [3964858](https://www.themoviedb.org/person/3964858): 2 films, pa, 2023–2025: Gol Gappe, Tenu Ghodi Kinney Chadaya
-
-## Kuku Kohli: likely the same
-- canonical [1782355](https://www.themoviedb.org/person/1782355): 5 films, hi, 1991–2003: Phool Aur Kaante, Yeh Dil Aashiqanaa, Haqeeqat
-- duplicate? [1043078](https://www.themoviedb.org/person/1043078): 3 films, hi, 1994–1999: Suhaag, Anari No. 1, Zulmi
 
 ## Vinod Kumar: likely the same
 - canonical [2571600](https://www.themoviedb.org/person/2571600): 6 films, te, 1991–2026: Kaatera, Gopi – Goda Meeda Pilli, Asadhyudu
@@ -363,45 +247,17 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [1948812](https://www.themoviedb.org/person/1948812): 6 films, pa, 2017–2026: Sajjan Singh Rangroot, Maurh, Toofan Singh
 - duplicate? [4328699](https://www.themoviedb.org/person/4328699): 2 films, pa, 2024–2026: Mittran Da Challeya Truck Ni, Oye Bhole Oye 2
 
-## Puja Gupta: likely the same
-- canonical [232536](https://www.themoviedb.org/person/232536): 4 films, hi, 2012–2015: OMG: Oh My God!, Vicky Donor, Hate Story 3
-- duplicate? [1172083](https://www.themoviedb.org/person/1172083): 3 films, hi, 2011–2013: Go Goa Gone, F.A.L.T.U., Shortcut Romeo
-
 ## Vinay Shukla: likely the same
 - canonical [230433](https://www.themoviedb.org/person/230433): 4 films, hi, 1981–2010: Mirch, Koi Mere Dil Se Poochhe, Godmother
 - duplicate? [4184717](https://www.themoviedb.org/person/4184717): 3 films, hi, 2012–2023: Ship of Theseus, An Insignificant Man, While We Watched
-
-## Sahil Mehta: likely the same
-- canonical [930038](https://www.themoviedb.org/person/930038): 5 films, hi, 2020–2023: Guilty, Raksha Bandhan, Good Luck Jerry
-- duplicate? [3637055](https://www.themoviedb.org/person/3637055): 2 films, hi, 2022–2022: Goodbye, Gair
-
-## Sameer Vidwans: likely the same
-- canonical [2248931](https://www.themoviedb.org/person/2248931): 5 films, mr, 2015–2025: Satyaprem Ki Katha, Tu Meri Main Tera Main Tera Tu Meri, Anandi Gopal
-- duplicate? [1298633](https://www.themoviedb.org/person/1298633): 2 films, mr, 2013–2016: YZ, Time Please
-
-## Vijaya Choudhury: likely the same
-- canonical [1710786](https://www.themoviedb.org/person/1710786): 5 films, hi, 1958–1974: Saraswatichandra, Palki, Phir Kab Milogi
-- duplicate? [3644812](https://www.themoviedb.org/person/3644812): 2 films, hi, 1957–1960: Bindya, Bade Sarkar
 
 ## Sultana: likely the same
 - canonical [1326707](https://www.themoviedb.org/person/1326707): 6 films, hi, 1924–1939: Prithvi Vallabh, Indrasabha, Gul-e-Bakavali
 - duplicate? [6001067](https://www.themoviedb.org/person/6001067): 1 films, hi, 1924–1924: Kalyan Khajina
 
-## Chitra: likely the same
-- canonical [2954548](https://www.themoviedb.org/person/2954548): 4 films, hi, 1954–1965: Khazanchi, Main Hoon Jadugar, Chor Bazar
-- duplicate? [3275951](https://www.themoviedb.org/person/3275951): 3 films, hi, 1958–1963: Zimbo, Tarzan aur Jadugar, Zimbo Comes To Town
-
 ## Jaggi Singh: likely the same
 - canonical [1585166](https://www.themoviedb.org/person/1585166): 4 films, pa, 2012–2019: Faraar, Manje Bistre 2, Subedar Joginder Singh
 - duplicate? [1767725](https://www.themoviedb.org/person/1767725): 3 films, pa, 2017–2024: Manje Bistre, Warning 2, Kuriyan Jawan Bapu Preshaan
-
-## Sanjay Nayak: likely the same
-- canonical [3980429](https://www.themoviedb.org/person/3980429): 5 films, or, 2003–2023: To Pain Nebi Mu Sahe Janama, To Pain Pheribi Rahila Rana, Rakhi Bandhili Mo Rakhiba Mana
-- duplicate? [1796649](https://www.themoviedb.org/person/1796649): 2 films, or, 2005–2007: To Bina Mo Kahani Adhaa, Babu I Love You
-
-## Kaizaad Kotwal: likely the same
-- canonical [1434770](https://www.themoviedb.org/person/1434770): 5 films, hi, 2014–2024: 2.0, Khoobsurat, Roy
-- duplicate? [3693562](https://www.themoviedb.org/person/3693562): 1 films, hi, 2022–2022: Ek Villain Returns
 
 ## Gayathri: likely the same
 - canonical [1340556](https://www.themoviedb.org/person/1340556): 4 films, ta, 2007–2022: Vikram Vedha, Vikram Vedha, Oram Po
@@ -451,6 +307,10 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [584366](https://www.themoviedb.org/person/584366): 4 films, ta, 1982–2025: Paramasivan Fathima, Sathiya Sothanai, Arasangam
 - duplicate? [1271728](https://www.themoviedb.org/person/1271728): 2 films, ta, 2013–2017: Pizza 2: Villa, En Aaloda Seruppa Kaanom
 
+## Sanjeev: likely the same
+- canonical [1333521](https://www.themoviedb.org/person/1333521): 4 films, ta, 2009–2022: Vedha, Manne No 13, 6 Athiyayam
+- duplicate? [2298670](https://www.themoviedb.org/person/2298670): 2 films, ta, 1989–2019: Agni Devi, Ponmana Selvan
+
 ## Nithin George: likely the same
 - canonical [3177068](https://www.themoviedb.org/person/3177068): 4 films, ml, 2022–2023: Paka, Nalla Nilavulla Rathri, Prappeda
 - duplicate? [3696657](https://www.themoviedb.org/person/3696657): 2 films, ml, 2022–2024: Whisper of the Lost, Vamanan
@@ -463,22 +323,162 @@ Same-name pairs, most likely duplicates first. Check both TMDb pages; if they're
 - canonical [4766358](https://www.themoviedb.org/person/4766358): 3 films, ml, 2023–2026: Romancham, Painkili, Avaraachan & Sons
 - duplicate? [3054011](https://www.themoviedb.org/person/3054011): 3 films, ml, 2021–2025: Attention Please, Kho Kho, Flask
 
-## Harini Shreekanth: likely the same
-- canonical [3554914](https://www.themoviedb.org/person/3554914): 4 films, kn, 2022–2025: 777 Charlie, Shakhahaari, Ekka
-- duplicate? [4597625](https://www.themoviedb.org/person/4597625): 2 films, kn, 2024–2026: Kerebete, College Kalavida
-
-## Avadhoot Gupte: likely the same
-- canonical [582498](https://www.themoviedb.org/person/582498): 4 films, mr, 2008–2017: Zenda, Morya, Boyz
-- duplicate? [2726124](https://www.themoviedb.org/person/2726124): 2 films, mr, 2013–2014: Rege, Zapatlela 2
-
-## Sumit Nijhawan: likely the same
-- canonical [1735000](https://www.themoviedb.org/person/1735000): 4 films, hi, 2005–2022: Mardaani 2, Jism 2, Blurr
-- duplicate? [5034962](https://www.themoviedb.org/person/5034962): 1 films, hi, 2010–2010: Phas Gaye Re Obama
-
-## Habib Tanvir: likely the same
-- canonical [1113723](https://www.themoviedb.org/person/1113723): 3 films, hi, 1953–2005: Mangal Pandey - The Rising, Prahaar, Rahi
-- duplicate? [1800523](https://www.themoviedb.org/person/1800523): 2 films, hi, 1975–2008: Charandas The Thief, Black & White
-
 ## Vikram Singh: likely the same
 - canonical [1082067](https://www.themoviedb.org/person/1082067): 3 films, hi, 2006–2015: Heropanti, Aatma, Rana Vikrama
 - duplicate? [1422006](https://www.themoviedb.org/person/1422006): 2 films, hi, 2016–2023: Kathal, Motor Mitraan Di
+
+## Mohit Ahlawat : likely the same
+- canonical [992724](https://www.themoviedb.org/person/992724): 3 films, hi, 2005–2015: Ek Paheli Leela, James, Shiva
+- duplicate? [147318](https://www.themoviedb.org/person/147318): 2 films, hi, 2010–2011: Shagird, The Film Emotional Atyachar
+
+## Ragini Khanna: likely the same
+- canonical [545523](https://www.themoviedb.org/person/545523): 3 films, hi, 2011–2020: Gurgaon, Ghoomketu, Teen Thay Bhai
+- duplicate? [1245857](https://www.themoviedb.org/person/1245857): 2 films, hi, 2013–2019: Posham Pa, Bhaji in Problem
+
+## Raj Kamal: likely the same
+- canonical [1199565](https://www.themoviedb.org/person/1199565): 3 films, hi, 1982–1987: Katha, 7 Saal Baad, Kanoon Meri Mutthi Mein
+- duplicate? [2926896](https://www.themoviedb.org/person/2926896): 2 films, hi, 1980–1981: Chashme Buddoor, Payal Ki Jhankaar
+
+## Vinay: likely the same
+- canonical [1422373](https://www.themoviedb.org/person/1422373): 3 films, hi, 1995–2009: Takkar, Newtonin Moondram Vidhi, Love in Nepal
+- duplicate? [4149633](https://www.themoviedb.org/person/4149633): 2 films, hi, 2010–2025: Bheemili Kabaddi Jattu, Pregnant Aatma - I Am Pregnant
+
+## Prabhu Dayal: likely the same
+- canonical [2061400](https://www.themoviedb.org/person/2061400): 3 films, hi, 1948–1958: Munimji, Lajwanti, Shaheed
+- duplicate? [1533894](https://www.themoviedb.org/person/1533894): 2 films, hi, 1955–1956: New Delhi, Ghar Number 44
+
+## Nazira: likely the same
+- canonical [1344881](https://www.themoviedb.org/person/1344881): 3 films, hi, 1940–1951: Bedardi, Muqabala, Diamond Queen
+- duplicate? [3527710](https://www.themoviedb.org/person/3527710): 2 films, hi, 1949–1950: Neki Aur Badi, Bawre Nain
+
+## Manimaran: likely the same
+- canonical [1169201](https://www.themoviedb.org/person/1169201): 3 films, ta, 2013–2021: Udhayam NH4, Pugazh, Sangathalaivan
+- duplicate? [1065797](https://www.themoviedb.org/person/1065797): 2 films, ta, 2023–2025: Irumban, Jora Kaiya Thattunga
+
+## Ishita Sharma: likely the same
+- canonical [105165](https://www.themoviedb.org/person/105165): 2 films, hi, 2007–2010: Dulha Mil Gaya, Dil Dosti Etc
+- duplicate? [900428](https://www.themoviedb.org/person/900428): 2 films, hi, 2008–2011: Sakkarakatti, Cycle Kick
+
+## Master Bittoo: likely the same
+- canonical [1036357](https://www.themoviedb.org/person/1036357): 2 films, hi, 1977–1979: Griha Pravesh, Karm
+- duplicate? [1976607](https://www.themoviedb.org/person/1976607): 2 films, hi, 1977–2009: Bin Maa Ke Bachche, Mukti
+
+## Vasant Joglekar: likely the same
+- canonical [3045361](https://www.themoviedb.org/person/3045361): 2 films, hi, 1958–1976: Karigar, Ha Khel Savlyancha
+- duplicate? [2626945](https://www.themoviedb.org/person/2626945): 2 films, hi, 1963–1965: Shevatcha Malusara, Aaj Aur Kal
+
+## Sriram: likely the same
+- canonical [3207658](https://www.themoviedb.org/person/3207658): 2 films, ta, 2007–2025: Revolver Rita, Bhayam
+- duplicate? [2081644](https://www.themoviedb.org/person/2081644): 2 films, ta, 2018–2024: Variyavan, Valari
+
+## Bharath GB: likely the same
+- canonical [4457236](https://www.themoviedb.org/person/4457236): 2 films, kn, 2023–2025: Sapta Sagaradaache Ello - Side B, The Task
+- duplicate? [4278614](https://www.themoviedb.org/person/4278614): 2 films, kn, 2023–2024: Toby, Roopanthara
+
+## Sukhbir Singh: likely the same
+- canonical [1948817](https://www.themoviedb.org/person/1948817): 2 films, pa, 2016–2019: Muklawa, Yaar Annmulle 2
+- duplicate? [2011100](https://www.themoviedb.org/person/2011100): 2 films, pa, 2015–2026: Leather Life, Dama Dum Mast Kalandar
+
+## Pushpa Panda: likely the same
+- canonical [5275703](https://www.themoviedb.org/person/5275703): 2 films, or, 2009–2026: Bara Badhu, Keun Dunia Ru Asila Bandhu
+- duplicate? [1956848](https://www.themoviedb.org/person/1956848): 2 films, or, 2025–2026: Shikar, Ajira Rebati
+
+## Kamal Tiwari: likely the same
+- canonical [4330110](https://www.themoviedb.org/person/4330110): 2 films, hi, 2007–2007: Jab We Met, The Blue Umbrella
+- duplicate? [4060094](https://www.themoviedb.org/person/4060094): 1 films, hi, 2006–2006: Omkara
+
+## Rohan Joshi: likely the same
+- canonical [4189407](https://www.themoviedb.org/person/4189407): 2 films, hi, 2017–2019: Junglee, Mantra
+- duplicate? [1738899](https://www.themoviedb.org/person/1738899): 1 films, hi, 2016–2016: Baar Baar Dekho
+
+## Anil Chaudhary: likely the same
+- canonical [2011848](https://www.themoviedb.org/person/2011848): 2 films, hi, 2005–2015: Kaagaz Ke Fools, Chehraa
+- duplicate? [3115135](https://www.themoviedb.org/person/3115135): 1 films, hi, 2014–2014: Ankhon Dekhi
+
+## Rajveer Singh: likely the same
+- canonical [1834784](https://www.themoviedb.org/person/1834784): 2 films, hi, 2017–2017: Mr. Kabaadi, G Kutta Se
+- duplicate? [2516660](https://www.themoviedb.org/person/2516660): 1 films, hi, 2019–2019: De De Pyaar De
+
+## Deepak Arora: likely the same
+- canonical [3396167](https://www.themoviedb.org/person/3396167): 1 films, hi, 2022–2022: Badhaai Do
+- duplicate? [1309107](https://www.themoviedb.org/person/1309107): 1 films, hi, 2020–2020: Mrs. Serial Killer
+
+## Manorama: maybe
+- canonical [552989](https://www.themoviedb.org/person/552989): 233 films, ta, 1960–2013: Indian, Singam 2, Arundhati
+- duplicate? [1325553](https://www.themoviedb.org/person/1325553): 50 films, hi, 1941–1981: Seeta and Geeta, Shaadi, Ek Phool Do Mali
+
+## Vijayakumar: maybe
+- canonical [237638](https://www.themoviedb.org/person/237638): 181 films, ta, 1966–2024: Singam, Chandramukhi, Baasha
+- duplicate? [1501423](https://www.themoviedb.org/person/1501423): 39 films, ml, 1992–2025: Salute, Chinthamani Kolacase, Malayalee from India
+
+## Rekha: maybe
+- canonical [109621](https://www.themoviedb.org/person/109621): 142 films, hi, 1958–2018: Krrish, Koi... Mil Gaya, Shamitabh
+- duplicate? [580892](https://www.themoviedb.org/person/580892): 68 films, ta, 1986–2026: Guruvayoor Ambalanadayil, In Harihar Nagar, Annamalai
+
+## Meena: maybe
+- canonical [549602](https://www.themoviedb.org/person/549602): 87 films, ta, 1982–2026: Drishyam, Drishyam 2, Muthu
+- duplicate? [1332750](https://www.themoviedb.org/person/1332750): 86 films, ml, 1967–1998: Yoddha, Varavelpu, Thalayana Manthram
+
+## Johny Lever: maybe
+- canonical [35819](https://www.themoviedb.org/person/35819): 165 films, hi, 1986–2026: Kuch Kuch Hota Hai, Dilwale, Kaho Naa... Pyaar Hai
+- duplicate? [1988590](https://www.themoviedb.org/person/1988590): 4 films, mr, 1989–2004: Bhutacha Bhau, Ustadon Ke Ustad, Navra Mazha Navsacha
+
+## Murali: maybe
+- canonical [1026358](https://www.themoviedb.org/person/1026358): 115 films, ml, 1985–2009: Aadhavan, Kireedam, C.I.D. Moosa
+- duplicate? [305641](https://www.themoviedb.org/person/305641): 29 films, ta, 1984–2010: Baana Kaathadi, Anandham, Vetri Kodi Kattu
+
+## Om Prakash: maybe
+- canonical [600251](https://www.themoviedb.org/person/600251): 133 films, hi, 1945–1991: Mera Naam Joker, Awaara, Chupke Chupke
+- duplicate? [3623291](https://www.themoviedb.org/person/3623291): 6 films, hi, 2009–2023: Kaminey, Commando - A One Man Army, Kismat Love Paisa Dilli
+
+## Shyam: maybe
+- canonical [585565](https://www.themoviedb.org/person/585565): 122 films, ml, 1976–2004: Nadodikkattu, Pattanapravesham, Oru CBI Diary Kurippu
+- duplicate? [3905075](https://www.themoviedb.org/person/3905075): 4 films, hi, 1948–1978: Majboor, Surajmukhi, Nirdosh
+
+## Kalpana: maybe
+- canonical [584252](https://www.themoviedb.org/person/584252): 102 films, ml, 1980–2017: Bangalore Days, Charlie, Oopiri
+- duplicate? [1046597](https://www.themoviedb.org/person/1046597): 20 films, kn, 1959–1978: Eradu Kanasu, Sharapanjara, Daari Thappida Maga
+
+## Murali: maybe
+- canonical [1026358](https://www.themoviedb.org/person/1026358): 115 films, ml, 1985–2009: Aadhavan, Kireedam, C.I.D. Moosa
+- duplicate? [2461441](https://www.themoviedb.org/person/2461441): 6 films, ta, 2002–2017: Autograph, Yendha Nerathilum, Imsai Arasan 23rd Pulikecei
+
+## Shankar: maybe
+- canonical [1133396](https://www.themoviedb.org/person/1133396): 78 films, ml, 1979–2026: Evidam Swargamanu, China Town, Abhimanyu
+- duplicate? [1078850](https://www.themoviedb.org/person/1078850): 41 films, ta, 1972–1990: Mrigaya, Vengayin Maindhan, Ranga
+
+## Murali: maybe
+- canonical [1026358](https://www.themoviedb.org/person/1026358): 115 films, ml, 1985–2009: Aadhavan, Kireedam, C.I.D. Moosa
+- duplicate? [1306605](https://www.themoviedb.org/person/1306605): 2 films, ta, 2009–2014: Naan Kadavul, Oru Oorla
+
+## Krishna: maybe
+- canonical [1470750](https://www.themoviedb.org/person/1470750): 100 films, te, 1962–2009: Kanthaswamy, Vamsi, Rajakumarudu
+- duplicate? [1352036](https://www.themoviedb.org/person/1352036): 12 films, ml, 1998–2022: Pathonpatham Noottandu, Shahjahan, Daya
+
+## Kiran Kumar: maybe
+- canonical [232828](https://www.themoviedb.org/person/232828): 108 films, hi, 1971–2025: Attack, Mujhse Dosti Karoge!, Brothers
+- duplicate? [1630051](https://www.themoviedb.org/person/1630051): 2 films, te, 2010–2026: Kedi, KJQ
+
+## Rajesh Sharma: maybe
+- canonical [648087](https://www.themoviedb.org/person/648087): 68 films, hi, 2000–2026: Bajrangi Bhaijaan, Special 26, Toilet: A Love Story
+- duplicate? [1758282](https://www.themoviedb.org/person/1758282): 40 films, ml, 2005–2026: Joseph, Ezra, Nanpakal Nerathu Mayakkam
+
+## Avinash: maybe
+- canonical [1179742](https://www.themoviedb.org/person/1179742): 96 films, kn, 1986–2026: Chandramukhi, Yennai Arindhaal, Veeram
+- duplicate? [5003145](https://www.themoviedb.org/person/5003145): 10 films, ta, 2018–2024: PEI KADHAI 2, AASPATHIRI, HEROIC
+
+## Srikanth: maybe
+- canonical [1003981](https://www.themoviedb.org/person/1003981): 60 films, te, 1991–2026: Devara: Part 1, Varisu, Sarrainodu
+- duplicate? [581891](https://www.themoviedb.org/person/581891): 46 films, ta, 2002–2026: Nanban, Aadavari Matalaku Ardhalu Verule, LIE
+
+## Jayabharathi: maybe
+- canonical [584824](https://www.themoviedb.org/person/584824): 102 films, ml, 1967–2002: Muthu, Michael Madana Kama Rajan, Dasharatham
+- duplicate? [1505718](https://www.themoviedb.org/person/1505718): 4 films, ta, 1979–1990: Kudisai, Oomai Janangal, Rendum Rendum Anju
+
+## Krishna: maybe
+- canonical [1470750](https://www.themoviedb.org/person/1470750): 100 films, te, 1962–2009: Kanthaswamy, Vamsi, Rajakumarudu
+- duplicate? [545016](https://www.themoviedb.org/person/545016): 3 films, ta, 2008–2010: Eeram, Anandhapurathu Veedu, Pathu Pathu
+
+## Srikanth: maybe
+- canonical [1003981](https://www.themoviedb.org/person/1003981): 60 films, te, 1991–2026: Devara: Part 1, Varisu, Sarrainodu
+- duplicate? [1129673](https://www.themoviedb.org/person/1129673): 41 films, ta, 1965–2005: Kadhal Konden, Devathayai Kanden, Velaikkaran
