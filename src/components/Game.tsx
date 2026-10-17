@@ -182,14 +182,9 @@ export default function Game(props: Props) {
     [idx, puzzle.e, rule],
   )
 
-  // Stepping straight back to the stop you came from goes nowhere and only costs a link,
-  // so it's only offered when it's the one way out (there's no undo).
-  const cameFrom = path.length > 1 ? path[path.length - 2].id : null
-  const options = useMemo<Option[]>(() => {
-    const all = allOptions()
-    const onward = all.filter((o) => o.node.id !== cameFrom)
-    return onward.length ? onward : all
-  }, [current, cameFrom, idx, films, rule]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Everyone is offered, including the stop you came from (marked as used): going back costs a link but
+  // is the only way to change course, since there's no undo.
+  const options = useMemo<Option[]>(allOptions, [current, idx, films, rule])
   function allOptions(): Option[] {
     const usable = (personId: string, role: Role) => creditOk(idx, rule, personId, role)
     if (current.kind === 'film') {

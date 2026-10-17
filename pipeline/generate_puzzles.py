@@ -55,15 +55,16 @@ LANG_NAMES = {"hi": "Hindi", "ta": "Tamil", "te": "Telugu", "ml": "Malayalam", "
 PAR_BY_WEEKDAY = [3, 3, 3, 3, 4, 4, 4]
 RULE_BY_WEEKDAY = [None, None, "nostars", "nostars", "crew", "crew", "crew"]
 CREW_MIN_BY_WEEKDAY = [0, 0, 0, 0, 1, 1, 2]  # crew links a Crew Call chain must make
-# "No Superstars" benches each industry's biggest leading stars, however short their filmography
-# (Prabhas has 27 films). Prolific character actors and crew aren't stars and stay in play.
+# "No Superstars" benches each industry's biggest headline stars, however short their filmography
+# (Prabhas has 27 films). Co-leads, character actors and crew aren't stars and stay in play: benching the
+# heroines too (Deepika, Nayanthara, Samantha) left mainstream films with almost nobody to link through.
 # Fame is the votes on films a person was billed in the top STAR_BILLING actors of, ranked per industry.
 # The app's starRanks() mirrors this exactly, so keep the two in step.
 # Puzzles published before this carry `ban` instead: people with that many films sat out.
 STAR_BENCH = 1000        # the old cut: this many most-connected people
 STAR_LANGS = ["hi", "ta", "te", "ml", "kn"]
-STARS_PER_LANG = 20
-STAR_BILLING = 2
+STARS_PER_LANG = 10
+STAR_BILLING = 1
 STAR_MIN_LEADS = 5       # leading roles needed to count, so one hit doesn't make a star
 CREW_ROLES = {"Director", "Music"}
 # Acceptable number of distinct shortest routes, by weekday: forgiving early, tight at the weekend.

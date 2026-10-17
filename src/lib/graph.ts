@@ -42,12 +42,12 @@ export function knownFor(idx: Index, personId: string): string | null {
 
 // Mirrors star_ranks() in pipeline/generate_puzzles.py: change both together.
 const STAR_LANGS: ReadonlySet<string> = new Set(['hi', 'ta', 'te', 'ml', 'kn'])
-const STAR_BILLING = 2
+const STAR_BILLING = 1
 const STAR_MIN_LEADS = 5
 
 /**
- * Who counts as a superstar: fame is the votes on films a person was billed in the top two actors of,
- * ranked within each home industry, for anyone with enough leading roles. Character actors and crew,
+ * Who counts as a superstar: fame is the votes on films a person was billed first among the actors in,
+ * ranked within each home industry, for anyone with enough leading roles. Co-leads, character actors and crew,
  * however many films they've made, are never stars.
  */
 function starRanks(data: GraphData): Record<string, number> {
