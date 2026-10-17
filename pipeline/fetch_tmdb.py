@@ -32,6 +32,8 @@ from graph_io import FILM_META_PATH, RETIRED_LANGUAGES, published_film_ids, writ
 
 API = "https://api.themoviedb.org/3"
 MERGES_PATH = Path(__file__).resolve().parent / "person_merges.json"
+# TMDb gender mistakes that matter to No Superstars: {person id: true gender (1 woman, 2 man)}.
+GENDER_FIXES = {"1497111": 2}  # Nirup Bhandari
 CACHE = Path(__file__).resolve().parent / ".cache"
 
 # Indian languages to pull. No per-language cap: every film with at least MIN_VOTES votes is kept.
@@ -193,6 +195,14 @@ def discover(lang: str, quota: float, **filters) -> list[dict]:
     return out if quota == float("inf") else out[: int(quota)]
 
 
+def entry(person: dict) -> dict:
+    """A person's graph.json entry. `w` marks women (TMDb gender 1), so No Superstars can bench heroines too."""
+    e = {"n": person["name"], "i": person.get("profile_path")}
+    if GENDER_FIXES.get(str(person["id"]), person.get("gender")) == 1:
+        e["w"] = 1
+    return e
+
+
 def main() -> None:
     if not (TOKEN or KEY):
         sys.exit("Set TMDB_READ_TOKEN or TMDB_API_KEY (free at themoviedb.org/settings/api).")
@@ -255,14 +265,14 @@ def main() -> None:
 
         def add(person: dict, role: str) -> None:
             if str(person["id"]) in merges:
-                people.setdefault(str(person["id"]), {"n": person["name"], "i": person.get("profile_path")})
+                people.setdefault(str(person["id"]), entry(person))
                 person = {**person, "id": merges[str(person["id"])]}
             key = (str(person["id"]), role)
             if key in seen:
                 return
             seen.add(key)
             rows.append(list(key))
-            people.setdefault(key[0], {"n": person["name"], "i": person.get("profile_path")})
+            people.setdefault(key[0], entry(person))
 
         crew = d["credits"]["crew"]
         for c in crew:

@@ -77,6 +77,26 @@ describe('Crew Call', () => {
   })
 })
 
+// No Superstars: hero h is billed first and heroine w second in five Hindi films, with co-star c third.
+const leadFilms = ['F1', 'F2', 'F3', 'F4', 'F5']
+const starsTiny: GraphData = {
+  meta: { source: 'seed', generated: '', films: 5, people: 3 },
+  films: Object.fromEntries(leadFilms.map((f, i) => [f, { t: f, y: 2000 + i, l: 'hi', p: null, pop: 10 }])),
+  people: { h: { n: 'Hero', i: null }, w: { n: 'Heroine', i: null, w: 1 }, c: { n: 'Co-star', i: null } },
+  credits: Object.fromEntries(leadFilms.map((f) => [f, [['h', 'Actor'], ['w', 'Actor'], ['c', 'Actor']]])),
+}
+
+describe('No Superstars', () => {
+  const idx = buildIndex(starsTiny)
+  it('benches the top heroes and heroines but not co-stars', () => {
+    const rule = { kind: 'nostars' as const, stars: 10, heroines: 5 }
+    expect(canUse(idx, rule, 'F1', 'h')).toBe(false)
+    expect(canUse(idx, rule, 'F1', 'w')).toBe(false)
+    expect(canUse(idx, rule, 'F1', 'c')).toBe(true)
+    expect(canUse(idx, { kind: 'nostars', stars: 10 }, 'F1', 'w')).toBe(true)
+  })
+})
+
 describe('free-play share links', () => {
   const idx = buildIndex(tiny)
   it('parses the pair, with the score and chain when present', () => {

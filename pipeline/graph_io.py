@@ -2,7 +2,7 @@
 
 graph.json shape (kept compact because the browser downloads it):
   films:   {film_id: {t: title, y: year, l: lang, p: poster_path|None, pop: float}}
-  people:  {person_id: {n: name, i: profile_path|None}}
+  people:  {person_id: {n: name, i: profile_path|None, w?: 1 if TMDb lists them as a woman}}
   credits: {film_id: [[person_id, role], ...]}   role ∈ Director | Music | Actor
 """
 
