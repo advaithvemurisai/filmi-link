@@ -102,6 +102,18 @@ describe('sync api', () => {
     expect((await handle(store, 'POST', { action: 'route', name: 'Dev', token: 'bad', date: '2026-09-29' })).status).toBe(401)
   })
 
+  it('keeps the hard mode flag only when it is true', async () => {
+    const store = memoryStore()
+    const r = await handle(store, 'POST', {
+      action: 'login', name: 'Hardy', pin: '7777',
+      results: { '2026-09-29': entry(2, { hard: true }), '2026-09-30': entry(2, { hard: 'yes' }) },
+    })
+    const results = r.body.results as Record<string, { hard?: boolean }>
+    expect(results['2026-09-29'].hard).toBe(true)
+    expect(results['2026-09-30']).toBeDefined()
+    expect(results['2026-09-30'].hard).toBeUndefined()
+  })
+
   it('clamps an implausibly long time instead of dropping the whole result (QA C7)', async () => {
     const store = memoryStore()
     const r = await handle(store, 'POST', { action: 'login', name: 'Slow', pin: '6666', results: { '2026-09-29': entry(2, { seconds: 8 * 86400 }) } })

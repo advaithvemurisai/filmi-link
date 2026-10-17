@@ -25,7 +25,7 @@ export function HowTo({ idx, onClose }: { idx: Index; onClose: () => void }) {
             Shortest chain = Blockbuster. Each extra link drops a tier: Hit, Flop, Disaster
           </li>
           <li><span aria-hidden><Icon name="calendar" size={16} /></span> <b>The weekend gets harder</b>: Mon–Fri normal, Saturday <b>No Superstars</b> (each industry’s biggest heroes and heroines are benched), Sunday <b>Crew Call</b> (your chain must pass through a director or composer who worked on the films on both sides, twice)</li>
-          <li><span aria-hidden><Icon name="flame" size={16} /></span> <b>Hard mode</b>: picked before your first move; no hints, no signal bars, no rings</li>
+          <li><span aria-hidden><Icon name="flame" size={16} /></span> <b>Hard mode</b>: picked before your first move; no hints, no signal bars, no rings, and up to 100 bonus points</li>
         </ul>
       </details>
     </Modal>

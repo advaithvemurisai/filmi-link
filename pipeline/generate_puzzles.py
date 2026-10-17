@@ -69,8 +69,9 @@ STAR_BILLING = 1
 HEROINE_BILLING = 2
 STAR_MIN_LEADS = 5       # leading roles needed to count, so one hit doesn't make a star
 CREW_ROLES = {"Director", "Music"}
-# Acceptable number of distinct shortest routes, by weekday: forgiving early, tight at the weekend.
-ROUTE_BAND = [(8, 120), (6, 90), (5, 60), (4, 45), (3, 30), (2, 20), (2, 14)]
+# Acceptable number of distinct shortest routes, by weekday. With the rules only on the weekend, this is
+# what ramps Monday to Friday: Monday has plenty of ways through, Friday only a handful.
+ROUTE_BAND = [(10, 150), (6, 80), (4, 45), (3, 25), (2, 12), (2, 20), (2, 14)]
 
 COOLDOWN_DAYS = 45       # a film won't reappear as an endpoint within this window
 CARRIER_COOLDOWN = 14    # nor will the person carrying most routes

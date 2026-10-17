@@ -105,6 +105,7 @@ export interface Entry {
   gaveUp: boolean
   path: Node[]
   live: boolean
+  hard?: true
 }
 interface Player {
   name: string
@@ -167,7 +168,7 @@ function cleanEntry(v: unknown): Entry | null {
     if (!o || (o.kind !== 'film' && o.kind !== 'person') || typeof o.id !== 'string' || o.id.length > 24) return null
     path.push({ kind: o.kind, id: o.id })
   }
-  return { links, par, seconds, hints, gaveUp: r.gaveUp === true, live: r.live === true, path }
+  return { links, par, seconds, hints, gaveUp: r.gaveUp === true, live: r.live === true, path, ...(r.hard === true ? { hard: true } : {}) }
 }
 
 /** First result for a day wins: a puzzle can't be replayed for a better score. */

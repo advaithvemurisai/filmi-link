@@ -216,7 +216,7 @@ export default function Game(props: Props) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
     const r = {
       links: linkCount(finalPath), par: puzzle.par, seconds: Math.max(0, Math.min(MAX_SECONDS, elapsedSeconds(Date.now()))),
-      hints, gaveUp, path: finalPath,
+      hints, gaveUp, path: finalPath, ...(hard ? { hard: true } : {}),
     }
     if (!gaveUp) setNewFaces(collectCast(finalPath, localDateKey()).length)
     event(gaveUp ? 'puzzle_give_up' : 'puzzle_finish', { ...metric, links: r.links, par: r.par, over: r.links - r.par, hints: r.hints, seconds: r.seconds })
@@ -714,7 +714,11 @@ const TICKET_BLOCKS = 8
 
 /** The 0-1000 score with where each point came from, so the number is never a mystery. */
 function ScoreCard({ parts }: { parts: ScoreParts }) {
-  const rows: [string, number][] = [['Links', parts.links], ['Hints', parts.hints], ['Speed', parts.speed], ...(parts.rare ? [['Rare route', parts.rare] as [string, number]] : [])]
+  const rows: [string, number][] = [
+    ['Links', parts.links], ['Hints', parts.hints], ['Speed', parts.speed],
+    ...(parts.hard ? [['Hard mode', parts.hard] as [string, number]] : []),
+    ...(parts.rare ? [['Rare route', parts.rare] as [string, number]] : []),
+  ]
   return (
     <div className="score-card" aria-label={`Score ${parts.total} out of 1000`}>
       <div className="score-total"><b>{parts.total}</b><span>/ 1000</span></div>
@@ -764,7 +768,7 @@ function ResultPanel({
     ? '⬛⬛⬛'
     : Array.from({ length: result.links }, (_, i) => (i < puzzle.par ? '🟩' : '🟧')).join('')
   const shareText = [
-    puzzle.rule ? `${shareTitle} · ${RULES[puzzle.rule].name}` : shareTitle,
+    [shareTitle + (result.hard ? ' (hard mode)' : ''), puzzle.rule && RULES[puzzle.rule].name].filter(Boolean).join(' · '),
     `${films[puzzle.s].t} → ${films[puzzle.e].t}`,
     result.gaveUp
       ? `${blocks} Shelved (shortest ${puzzle.par})`

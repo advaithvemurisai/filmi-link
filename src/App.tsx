@@ -367,7 +367,7 @@ export default function App() {
       : `${trackName} #${dailyNo}${mode.date === today ? ' · Today' : ''}`
   const shareTitle = mode.kind === 'free'
     ? 'CinematicLink · free play'
-    : `CinematicLink ${track === 'all' ? '' : `${trackName} `}#${dailyNo}${settings.hard ? ' (hard mode)' : ''}`
+    : `CinematicLink ${track === 'all' ? '' : `${trackName} `}#${dailyNo}`
 
   const saveTrackResults = (next: Record<string, Result>) => {
     saveResults(next, track)
