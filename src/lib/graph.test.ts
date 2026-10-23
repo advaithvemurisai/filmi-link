@@ -215,6 +215,17 @@ describe('shipped data', { timeout: 30_000 }, () => {
       recent.add(pz.s).add(pz.e)
     }
   })
+  it('a run of Hard chains stays at par 4 once every par-4 end film is on the recent list', () => {
+    let seed = 11
+    const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    const recent: string[] = []
+    for (let i = 0; i < 30; i++) {
+      const pz = randomPuzzle(idx, 4, rng, new Set(recent))!
+      expect(pz.par).toBe(4)
+      recent.unshift(pz.s, pz.e)
+      recent.splice(120)
+    }
+  })
 })
 
 describe('daily schedule', () => {

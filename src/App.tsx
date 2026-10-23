@@ -66,6 +66,11 @@ function validProgress(idx: Index, date: string, start: string, track: Track) {
   return p && isValidChain(idx, p.path, start) ? p : null
 }
 
+/** A saved result only if its chain is for this exact puzzle: a day's pair can change after it was played. */
+function resultFor(idx: Index, pz: PuzzleDef, r: Result | undefined) {
+  return r && isValidChain(idx, r.path, pz.s, r.gaveUp ? undefined : pz.e) ? r : null
+}
+
 /** landing.json: a few weeks of daily previews (see write_landing in pipeline/generate_puzzles.py). */
 interface LandingFile {
   days: Record<string, { faces: [string, Role][] }>
@@ -447,7 +452,7 @@ export default function App() {
 
       {puzzle ? (
         <Game
-          key={mode.kind === 'daily' ? `${track}${mode.date}` : `free${mode.n}`}
+          key={mode.kind === 'daily' ? `${track}${mode.date}:${puzzle.s}.${puzzle.e}` : `free${mode.n}`}
           idx={idx}
           puzzle={puzzle}
           label={label}
@@ -462,7 +467,7 @@ export default function App() {
           friendPath={friend?.path ?? null}
           coach={coach && mode.kind === 'daily'}
           routeShare={mode.kind === 'daily' && mode.date === today && track === 'all' ? routeShare : null}
-          initialResult={mode.kind === 'daily' ? activeResults[mode.date] ?? null : null}
+          initialResult={mode.kind === 'daily' ? resultFor(idx, puzzle, activeResults[mode.date]) : null}
           initialProgress={mode.kind === 'daily' ? validProgress(idx, mode.date, puzzle.s, track) : null}
           onProgress={(p) => {
             if (mode.kind === 'daily') saveProgress(mode.date, p, track)

@@ -312,7 +312,8 @@ export function randomPuzzle(idx: Index, want: number, rng = Math.random, avoid:
   const pool = films.slice(0, Math.min(800, Math.max(60, Math.floor(films.length * 0.4))))
   // Well-known films sit so close together that par 4 rarely exists inside the pool, so the end film
   // may come from this wider (still recognisable) set when the pool has no exact match.
-  const wide = films.slice(0, Math.max(pool.length, 2500)).filter((f) => !avoid.has(f))
+  const wideAll = films.slice(0, Math.max(pool.length, 2500))
+  const wide = wideAll.filter((f) => !avoid.has(f))
   const fresh = pool.filter((f) => !avoid.has(f))
   const starts = fresh.length >= 20 ? fresh : pool
   let best: { s: string; e: string; par: number } | null = null
@@ -326,7 +327,10 @@ export function randomPuzzle(idx: Index, want: number, rng = Math.random, avoid:
     let gap = Math.min(...cands.map((f) => Math.abs(dist.get(f)! - want)))
     let pick = cands.filter((f) => Math.abs(dist.get(f)! - want) === gap)
     if (gap > 0) {
-      const exact = wide.filter((f) => f !== s && dist.get(f) === want)
+      // Few well-known films sit 4 links out, so a run of Hard chains soon puts them all on the recent
+      // list. A repeated end film beats quietly serving an easier chain than the player asked for.
+      const exactIn = (set: string[]) => set.filter((f) => f !== s && dist.get(f) === want)
+      const exact = exactIn(wide).length ? exactIn(wide) : exactIn(wideAll)
       if (exact.length) [gap, pick] = [0, exact]
     }
     const e = pick[Math.floor(rng() * pick.length)]
