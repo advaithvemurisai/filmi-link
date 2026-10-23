@@ -34,6 +34,14 @@ API = "https://api.themoviedb.org/3"
 MERGES_PATH = Path(__file__).resolve().parent / "person_merges.json"
 # TMDb gender mistakes that matter to No Superstars: {person id: true gender (1 woman, 2 man)}.
 GENDER_FIXES = {"1497111": 2}  # Nirup Bhandari
+# TMDb original_language mistakes, hand-checked against the film's script, cast and director: {film id: true language}.
+# Not inferred from the title's script: Pavitra Papi (1970) and Satluj (2026) have Gurmukhi titles but are Hindi films.
+LANGUAGE_FIXES = {
+    "1623923": "ml",  # Puthiya Akasam Puthiya Bhoomi (1962), tagged kn
+    "66230": "ta",  # Pazhani (2008), Perarasu's Tamil film, tagged te
+    "515045": "te",  # Aithe 2.0 (2018), tagged hi
+    "1198607": "kn",  # Thathsama Thathbhava (2023), tagged te
+}
 CACHE = Path(__file__).resolve().parent / ".cache"
 
 # Indian languages to pull. No per-language cap: every film with at least MIN_VOTES votes is kept.
@@ -257,7 +265,7 @@ def main() -> None:
         films[fid] = {
             "t": display_title(d),
             "y": year,
-            "l": d.get("original_language") or ids[d["id"]],
+            "l": LANGUAGE_FIXES.get(fid) or d.get("original_language") or ids[d["id"]],
             "p": d.get("poster_path"),
             "pop": round(float(d.get("vote_count", 0)), 1),
         }
