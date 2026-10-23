@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { handle, memoryStore } from '../../api/sync'
+import { handle, memoryStore, pairsFrom } from '../../api/sync'
 
 const entry = (links: number, extra: Record<string, unknown> = {}) => ({
   links, par: 2, seconds: 60, hints: 0, gaveUp: false, live: true,
@@ -50,6 +50,24 @@ describe('sync api', () => {
     const results = r.body.results as Record<string, { links: number }>
     expect(Object.keys(results).sort()).toEqual(['2026-09-29', '2026-09-30'])
     expect(results['2026-09-29'].links).toBe(3)
+  })
+
+  it('when a day’s pair was replaced, the first result for the new pair replaces the stale one', async () => {
+    const store = memoryStore()
+    // Played on the old pair (1 → 3) before the day was regenerated to 5 → 7.
+    const login = await handle(store, 'POST', { action: 'login', name: 'Meera', pin: '4321', home: { kn: { '2026-10-23': entry(3) } } })
+    const auth = { name: 'Meera', token: login.body.token }
+    const pairs = pairsFrom({ kn: { epoch: '2026-10-23', puzzles: [{ s: '5', e: '7' }] } })
+    const now = (links: number) => entry(links, { path: [{ kind: 'film', id: '5' }, { kind: 'person', id: '6' }, { kind: 'film', id: '7' }] })
+    const r = await handle(store, 'POST', { action: 'sync', ...auth, results: {}, home: { kn: { '2026-10-23': now(4) } } }, pairs)
+    expect((r.body.home as Record<string, Record<string, { links: number }>>).kn['2026-10-23'].links).toBe(4)
+    // Still first-result-wins on the new pair, and a stale device can't put the old chain back.
+    const again = await handle(store, 'POST', {
+      action: 'sync', ...auth, results: {}, home: { kn: { '2026-10-23': now(2), '2026-10-24': entry(2) } },
+    }, pairs)
+    const kn = (again.body.home as Record<string, Record<string, { links: number }>>).kn
+    expect(kn['2026-10-23'].links).toBe(4)
+    expect(kn['2026-10-24']).toBeUndefined()
   })
 
   it('requires a valid token to sync or see the board', async () => {

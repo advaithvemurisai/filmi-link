@@ -3,6 +3,11 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/sync.ts": {
+      "includeFiles": "public/data/puzzles*.json"
+    }
+  },
   "headers": [
     {
       "source": "/data/(.*)",

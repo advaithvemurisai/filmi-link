@@ -10,6 +10,9 @@
  * opt in without an account; api/remind.ts sends the reminders.
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 export interface Store {
   get(key: string): Promise<string | null>
   /** SET, with an expiry when `ttlSeconds` is given. */
@@ -171,17 +174,30 @@ function cleanEntry(v: unknown): Entry | null {
   return { links, par, seconds, hints, gaveUp: r.gaveUp === true, live: r.live === true, path, ...(r.hard === true ? { hard: true } : {}) }
 }
 
-/** First result for a day wins: a puzzle can't be replayed for a better score. */
-function merge(into: Record<string, Entry>, incoming: unknown) {
+/** A day's start and target films on one track ('all' or a language), or null when the schedule isn't known here. */
+export type Pairs = (track: string, date: string) => { s: string; e: string } | null
+
+/** Does a chain belong to this day's puzzle? A give-up only has to start in the right place. */
+const fits = (r: Entry, pz: { s: string; e: string }) =>
+  r.path[0]?.id === pz.s && (r.gaveUp || r.path[r.path.length - 1]?.id === pz.e)
+
+/**
+ * First result for a day wins: a puzzle can't be replayed for a better score. When the day's pair is
+ * known, a result for a different pair is refused, and a stored one for a pair that was since replaced
+ * gives way to the first result for the new pair.
+ */
+function merge(into: Record<string, Entry>, incoming: unknown, pair: (date: string) => { s: string; e: string } | null = () => null) {
   if (!incoming || typeof incoming !== 'object') return
   let n = Object.keys(into).length
   for (const [date, v] of Object.entries(incoming as Record<string, unknown>)) {
     if (n >= 5000) break
-    if (!DATE_RE.test(date) || date in into) continue
+    if (!DATE_RE.test(date)) continue
+    const pz = pair(date)
+    if (date in into && (!pz || fits(into[date], pz))) continue
     const e = cleanEntry(v)
-    if (e) {
+    if (e && (!pz || fits(e, pz))) {
+      if (!(date in into)) n++
       into[date] = e
-      n++
     }
   }
 }
@@ -193,17 +209,17 @@ const LANG_RE = /^[a-z]{2}$/
 const MAX_LANGS = 8
 
 /** Merge home-cinema results language by language. Returns true if anything new was stored. */
-function mergeHome(p: Player, incoming: unknown): boolean {
+function mergeHome(p: Player, incoming: unknown, pairs: Pairs): boolean {
   if (!incoming || typeof incoming !== 'object') return false
   p.home ??= {}
   let changed = false
   for (const [lang, v] of Object.entries(incoming as Record<string, unknown>)) {
     if (!LANG_RE.test(lang) || (!(lang in p.home) && Object.keys(p.home).length >= MAX_LANGS)) continue
     const into = (p.home[lang] ??= {})
-    const before = Object.keys(into).length
-    merge(into, v)
-    if (Object.keys(into).length !== before) changed = true
-    else if (!before) delete p.home[lang]
+    const before = JSON.stringify(into)
+    merge(into, v, (d) => pairs(lang, d))
+    if (JSON.stringify(into) !== before) changed = true
+    else if (before === '{}') delete p.home[lang]
   }
   return changed
 }
@@ -259,7 +275,7 @@ async function authed(store: Store, body: Record<string, unknown>): Promise<Play
   return p
 }
 
-export async function handle(store: Store, method: string, body: unknown): Promise<Reply> {
+export async function handle(store: Store, method: string, body: unknown, pairs: Pairs = () => null): Promise<Reply> {
   if (method !== 'POST') return fail(405, 'Use POST.')
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
 
@@ -289,8 +305,8 @@ export async function handle(store: Store, method: string, body: unknown): Promi
       }
       await store.del(failKey(key))
     }
-    merge(p.results, b.results)
-    mergeHome(p, b.home)
+    merge(p.results, b.results, (d) => pairs('all', d))
+    mergeHome(p, b.home, pairs)
     await store.set(userKey(key), JSON.stringify(p))
     return { status: 200, body: { name: p.name, token: p.token, results: p.results, home: p.home ?? {}, created } }
   }
@@ -298,10 +314,10 @@ export async function handle(store: Store, method: string, body: unknown): Promi
   if (b.action === 'sync') {
     const p = await authed(store, b)
     if ('status' in p) return p
-    const before = Object.keys(p.results).length
-    merge(p.results, b.results)
-    const homeChanged = mergeHome(p, b.home)
-    if (homeChanged || Object.keys(p.results).length !== before) {
+    const before = JSON.stringify(p.results)
+    merge(p.results, b.results, (d) => pairs('all', d))
+    const homeChanged = mergeHome(p, b.home, pairs)
+    if (homeChanged || JSON.stringify(p.results) !== before) {
       await store.set(userKey(p.name.toLowerCase()), JSON.stringify(p))
     }
     return { status: 200, body: { results: p.results, home: p.home ?? {} } }
@@ -395,13 +411,44 @@ export async function handle(store: Store, method: string, body: unknown): Promi
 interface Req { method?: string; body?: unknown }
 interface Res { status(code: number): { json(body: unknown): void } }
 
+type Schedule = { epoch: string; puzzles: { s: string; e: string }[] }
+const DAY_MS = 86_400_000
+const utc = (key: string) => { const [y, m, d] = key.split('-').map(Number); return Date.UTC(y, m - 1, d) }
+
+/** A day's pair from a schedule file, wrapping like the app's puzzleFor (src/lib/daily.ts). */
+export function pairsFrom(files: Record<string, Schedule | null>): Pairs {
+  return (track, date) => {
+    const f = files[track]
+    if (!f?.puzzles.length) return null
+    const n = Math.round((utc(date) - utc(f.epoch)) / DAY_MS)
+    return n < 0 ? null : f.puzzles[n % f.puzzles.length]
+  }
+}
+
+// The published schedules ship with this function (vercel.json includeFiles). A track whose file
+// can't be read falls back to plain first-result-wins rather than failing the sync.
+const schedules: Record<string, Schedule | null> = {}
+function loadSchedule(track: string): Schedule | null {
+  if (!(track in schedules)) {
+    const file = track === 'all' ? 'puzzles.json' : `puzzles-${track}.json`
+    try {
+      schedules[track] = JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', file), 'utf8')) as Schedule
+    } catch {
+      schedules[track] = null
+    }
+  }
+  return schedules[track]
+}
+const publishedPairs: Pairs = (track, date) =>
+  /^(all|[a-z]{2})$/.test(track) ? pairsFrom({ [track]: loadSchedule(track) })(track, date) : null
+
 export default async function handler(req: Req, res: Res) {
   const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
   if (!url || !token) return res.status(503).json({ error: 'Sync isn’t set up on this server yet.' })
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
-    const out = await handle(upstash(url, token), req.method ?? 'GET', body)
+    const out = await handle(upstash(url, token), req.method ?? 'GET', body, publishedPairs)
     res.status(out.status).json(out.body)
   } catch {
     res.status(500).json({ error: 'Sync failed. Your results are still saved on this device.' })

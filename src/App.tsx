@@ -208,7 +208,10 @@ export default function App() {
       let newestLang: string | undefined
       for (const [lang, remote] of Object.entries(home)) {
         if (!HOME_LANGS.includes(lang)) continue
-        const merged = { ...loadResults(lang), ...remote }
+        // A server copy that isn't for the day's current pair (it was played before the pair changed)
+        // must not overwrite a valid result played here since.
+        const fresh = lang === homeLang && homeFile ? validResults(idx, homeFile, remote) : remote
+        const merged = { ...loadResults(lang), ...fresh }
         saveResults(merged, lang)
         if (lang === homeLang && homeFile) setHomeResults(validResults(idx, homeFile, merged))
         const last = Object.keys(merged).sort().pop() ?? ''
@@ -232,7 +235,7 @@ export default function App() {
       const cleanLocal = validResults(idx, file, local)
       sync(account, cleanLocal, loadAllHomeResults(HOME_LANGS))
         .then((r) => {
-          const merged = validResults(idx, file, { ...cleanLocal, ...r.results })
+          const merged = { ...cleanLocal, ...validResults(idx, file, r.results) }
           saveResults(merged)
           setResults((prev) => validResults(idx, file, { ...prev, ...merged }))
           adoptHome(r.home ?? {})
@@ -524,7 +527,7 @@ export default function App() {
           onSignedIn={(a, merged, home, created) => {
             saveAccount(a)
             setAccount(a)
-            const all = validResults(idx, file, { ...results, ...merged })
+            const all = { ...results, ...validResults(idx, file, merged) }
             saveResults(all)
             setResults(all)
             adoptHome(home)
