@@ -12,18 +12,19 @@ export interface PuzzleDef {
   alts?: string[][]
   /** Generator's grade from chain length and how many (findable) shortest routes exist: 1 easy, 2 medium, 3 hard. */
   d?: number
-  /** The weekly ladder's rule for the day: 'nostars' (each industry's `stars` most famous heroes and `heroines` heroines can't be used;
-   * older puzzles bench people with `ban`+ films instead) or 'crew'
+  /** The weekly ladder's rule for the day: 'nostars' (each industry's `stars` most famous heroes and `heroines` heroines can't be used,
+   * nor anyone listed in `bench`; older puzzles bench people with `ban`+ films instead) or 'crew'
    * (the chain must make `min` crew links; without `min`, the old rule: no actors at all). */
   rule?: 'nostars' | 'crew'
   ban?: number
   stars?: number
   heroines?: number
+  bench?: string[]
   min?: number
 }
 
 /** The day's rule as the graph helpers take it, or null on a normal day. */
-export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban, stars: p.stars, heroines: p.heroines, min: p.min } : null)
+export const ruleOf = (p: PuzzleDef): Rule | null => (p.rule ? { kind: p.rule, ban: p.ban, stars: p.stars, heroines: p.heroines, bench: p.bench, min: p.min } : null)
 
 /** Name of each rule, for the stage, the landing page and share text. */
 export const RULES: Record<Rule['kind'], { name: string }> = {

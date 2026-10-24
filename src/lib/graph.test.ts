@@ -95,6 +95,9 @@ describe('No Superstars', () => {
     expect(canUse(idx, rule, 'F1', 'c')).toBe(true)
     expect(canUse(idx, { kind: 'nostars', stars: 10 }, 'F1', 'w')).toBe(true)
   })
+  it('also benches the hand-picked list the puzzle carries', () => {
+    expect(canUse(idx, { kind: 'nostars', stars: 10, heroines: 5, bench: ['c'] }, 'F1', 'c')).toBe(false)
+  })
 })
 
 describe('free-play share links', () => {

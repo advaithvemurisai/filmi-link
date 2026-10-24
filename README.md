@@ -21,7 +21,7 @@ Every puzzle is graded **Easy**, **Medium** or **Hard**, and the week gets harde
 | Day | Rule |
 |---|---|
 | Monday to Friday | Normal rules. The number of shortest routes tightens through the week, from 10 to 150 on Monday down to 2 to 12 on Friday. |
-| Saturday | **No Superstars.** Each industry's 10 biggest heroes and 5 biggest heroines sit out. |
+| Saturday | **No Superstars.** Each industry's 15 biggest heroes and 10 biggest heroines sit out, plus a short hand-picked list of stars the vote counts underrate. |
 | Sunday | **Crew Call.** The chain must use two crew links: a director or composer who connects films on either side of them. |
 
 **Score (0 to 1000).** Links earn up to 700, and every link over the shortest chain costs points. Each hint costs 100. A fast solve earns up to 100, Hard mode (no hints or aids, chosen before your first pick) up to 100, and a rare shortest route another 100. Speed and Hard mode bonuses shrink with the links points, so a quick but long wander can't make up for itself.

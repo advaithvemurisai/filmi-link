@@ -77,16 +77,18 @@ function starRanks(data: GraphData, women = false): Record<string, number> {
 
 /**
  * A day's rule, from the weekly ladder. `nostars`: each industry's `stars` most famous heroes (and
- * `heroines` most famous heroines) sit the day out (puzzles from before that carry `ban` instead: people with that many films sat out).
+ * `heroines` most famous heroines) sit the day out, plus anyone in `bench`, the generator's hand-picked list of stars
+ * the votes underrate (puzzles from before that carry `ban` instead: people with that many films sat out).
  * `crew`: anyone can link films, but the chain must make at least `min` crew links (see `crewLink`).
  * A `crew` puzzle without `min` was published under the old rule, where only director and music credits link.
  */
-export interface Rule { kind: 'nostars' | 'crew'; ban?: number; stars?: number; heroines?: number; min?: number }
+export interface Rule { kind: 'nostars' | 'crew'; ban?: number; stars?: number; heroines?: number; bench?: string[]; min?: number }
 
 /** Whether one credit (a person in a role on some film) can be used under the day's rule. */
 export function creditOk(idx: Index, rule: Rule | null | undefined, personId: string, role: Role): boolean {
   if (!rule) return true
   if (rule.kind === 'nostars') {
+    if (rule.bench?.includes(personId)) return false
     if (!rule.stars) return (idx.degree[personId] ?? 0) < (rule.ban ?? Infinity)
     return (idx.starRank[personId] ?? Infinity) >= rule.stars && (idx.heroineRank[personId] ?? Infinity) >= (rule.heroines ?? 0)
   }
