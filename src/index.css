@@ -490,6 +490,10 @@ div.face .avatar { opacity: .85; }
 @keyframes fade-in { to { opacity: .9; } }
 .rm-node { position: absolute; transform: translate(-50%, -50%); animation: node-in .4s cubic-bezier(.3,1.5,.5,1) both; animation-delay: var(--d); }
 @keyframes node-in { from { transform: translate(-50%, -50%) scale(0); } }
+.rm-node:hover, .rm-node:focus-visible { z-index: 2; outline: none; }
+.rm-node::after { content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; padding: 3px 8px; border-radius: 6px; background: var(--text); color: var(--bg); font-size: 12px; pointer-events: none; opacity: 0; transition: opacity .12s; }
+.rm-node.tip-below::after { bottom: auto; top: calc(100% + 6px); }
+.rm-node:hover::after, .rm-node:focus-visible::after { opacity: 1; }
 .rm-node .poster { width: 40px; height: 58px; font-size: 8px; }
 .rm-node .avatar { width: 42px; height: 42px; }
 .rm-node.is-shared .poster, .rm-node.is-shared .avatar { outline: 2px solid var(--text); outline-offset: 2px; }

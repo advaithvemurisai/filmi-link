@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { nodeLabel, type Index, type Node } from '../lib/graph'
+import { langName } from '../lib/format'
 import { Avatar, Icon, Poster } from './Bits'
 
 const key = (n: Node) => `${n.kind}:${n.id}`
@@ -118,12 +119,14 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
           </svg>
           {w > 0 && [...at].map(([k, s]) => {
             const p = point(s.slot, s.lane)
+            const label = nodeLabel(idx, s.node) +
+              (s.node.kind === 'film' && idx.sharedTitle.has(s.node.id) ? ` (${langName(idx.data.films[s.node.id].l)})` : '')
             return (
             <span
               key={k}
-              className={`rm-node rm-${s.node.kind} ${s.shared ? 'is-shared' : ''}`}
+              className={`rm-node rm-${s.node.kind} ${s.shared ? 'is-shared' : ''} ${s.lane < 0 ? 'tip-below' : ''}`}
               style={{ left: p.x, top: p.y, '--d': `${s.order * 140}ms` } as CSSProperties}
-              title={nodeLabel(idx, s.node)}
+              data-label={label} aria-label={label} tabIndex={0}
             >
               {s.node.kind === 'film' ? <Poster idx={idx} id={s.node.id} size="sm" /> : <Avatar idx={idx} id={s.node.id} size="sm" />}
             </span>
