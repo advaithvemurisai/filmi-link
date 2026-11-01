@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type MouseEvent } from 'react'
 import { nodeLabel, type Index, type Node } from '../lib/graph'
 import { langName } from '../lib/format'
 import { Avatar, Icon, Poster } from './Bits'
@@ -92,6 +92,20 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
     return () => ro.disconnect()
   }, [])
 
+  // One tooltip drawn outside the scroll box (which would clip it) and kept inside the viewport.
+  const [tip, setTip] = useState<{ label: string; x: number; top: number; bottom: number; below: boolean } | null>(null)
+  const tipRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = tipRef.current
+    if (!tip || !el) return
+    const half = el.offsetWidth / 2
+    el.style.left = `${Math.min(Math.max(tip.x, half + 8), window.innerWidth - half - 8)}px`
+  }, [tip])
+  const showTip = (e: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>, label: string, below: boolean) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    setTip({ label, x: r.left + r.width / 2, top: r.top, bottom: r.bottom, below })
+  }
+
   if (!layout.routes.length) return null
   const H = layout.routes.length > 1 ? 190 : 120
   const laneGap = H * 0.24
@@ -104,7 +118,7 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
 
   return (
     <figure className="routemap">
-      <div className="routemap-scroll">
+      <div className="routemap-scroll" onScroll={() => setTip(null)}>
         <div className="routemap-canvas" ref={canvasRef} style={{ minWidth: (layout.span + 1) * SLOT_W, height: H }}>
           <svg viewBox={`0 0 ${w || 100} ${H}`} aria-hidden>
             {layout.edges.map((e, i) => {
@@ -124,9 +138,11 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
             return (
             <span
               key={k}
-              className={`rm-node rm-${s.node.kind} ${s.shared ? 'is-shared' : ''} ${s.lane < 0 ? 'tip-below' : ''}`}
+              className={`rm-node rm-${s.node.kind} ${s.shared ? 'is-shared' : ''} `}
               style={{ left: p.x, top: p.y, '--d': `${s.order * 140}ms` } as CSSProperties}
-              data-label={label} aria-label={label} tabIndex={0}
+              aria-label={label} tabIndex={0}
+              onMouseEnter={(e) => showTip(e, label, s.lane < 0)} onMouseLeave={() => setTip(null)}
+              onFocus={(e) => showTip(e, label, s.lane < 0)} onBlur={() => setTip(null)}
             >
               {s.node.kind === 'film' ? <Poster idx={idx} id={s.node.id} size="sm" /> : <Avatar idx={idx} id={s.node.id} size="sm" />}
             </span>
@@ -134,6 +150,11 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
           })}
         </div>
       </div>
+      {tip && (
+        <div ref={tipRef} className="rm-tip" role="tooltip" style={{ left: tip.x, top: tip.below ? tip.bottom + 6 : tip.top - 6 }} data-below={tip.below}>
+          {tip.label}
+        </div>
+      )}
       <figcaption className="routemap-key">
         {mine && best && mine.length === best.length
           ? <span><i className="key-mine" /> <Icon name="check" size={13} /> Your chain, a shortest chain</span>
