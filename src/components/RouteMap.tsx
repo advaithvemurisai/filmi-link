@@ -34,10 +34,10 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
     })
     const main = routes.reduce((a, b) => (b.path.length > a.path.length ? b : a))
     const mainSlot = new Map(spotKeys[routes.indexOf(main)].map((k, i) => [k, i]))
-    routes.forEach((r, ri) => {
-      // Stops shared with the longest route keep its slot; the rest are spread evenly between them,
-      // so neither route ever runs backwards. (Averaging the two positions could put a shared stop
-      // behind the next one on the longer route.)
+    // Stops shared with the longest route keep its order; the rest are spread evenly between them,
+    // so neither route ever runs backwards. (Averaging the two positions could put a shared stop
+    // behind the next one on the longer route.)
+    const anchorsOf = routes.map((r, ri) => {
       const anchors: [number, number][] = []
       spotKeys[ri].forEach((k, i) => {
         const at = mainSlot.get(k)
@@ -46,12 +46,28 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
       })
       if (anchors[0]?.[0] !== 0) anchors.unshift([0, 0])
       if (anchors[anchors.length - 1][0] !== r.path.length - 1) anchors.push([r.path.length - 1, longest - 1])
+      return anchors
+    })
+    // A detour (a chain that loops back) has more stops than the longest route has between the same two
+    // shared stops, so those gaps widen to fit it instead of piling its stops on top of each other.
+    const gap = Array.from({ length: longest }, () => 1)
+    for (const anchors of anchorsOf)
+      for (let a = 0; a + 1 < anchors.length; a++) {
+        const [i0, s0] = anchors[a]
+        const [i1, s1] = anchors[a + 1]
+        if (s1 > s0) for (let j = s0; j < s1; j++) gap[j] = Math.max(gap[j], (i1 - i0) / (s1 - s0))
+      }
+    const place = [0]
+    for (let j = 0; j < longest - 1; j++) place.push(place[j] + gap[j])
+    const span = place[longest - 1]
+    routes.forEach((r, ri) => {
+      const anchors = anchorsOf[ri]
       let a = 0
       r.path.forEach((n, i) => {
         while (anchors[a + 1] && anchors[a + 1][0] < i) a++
         const [i0, s0] = anchors[a]
         const [i1, s1] = anchors[a + 1] ?? anchors[a]
-        const slot = i1 === i0 ? s0 : s0 + ((s1 - s0) * (i - i0)) / (i1 - i0)
+        const slot = i1 === i0 ? place[s0] : place[s0] + ((place[s1] - place[s0]) * (i - i0)) / (i1 - i0)
         const k = spotKeys[ri][i]
         const shared = k === key(n) && (counts.get(k) ?? 0) > 1
         if (!spots.has(k)) spots.set(k, { node: n, slot, lane: shared ? 0 : r.lane, shared, order: i })
@@ -60,7 +76,7 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
     const edges = routes.flatMap((r, ri) =>
       r.path.slice(1).map((_, i) => ({ a: spotKeys[ri][i], b: spotKeys[ri][i + 1], cls: r.cls, order: i })),
     )
-    return { spots: [...spots.entries()], edges, routes, longest }
+    return { spots: [...spots.entries()], edges, routes, span }
   }, [mine, best])
 
   // Draw in pixels (not a stretched viewBox) so strokes and the draw-on animation stay true.
@@ -80,7 +96,7 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
   const laneGap = H * 0.24
   // Slot -> pixel along one row; lane shifts a stop above or below the centre line.
   const point = (slot: number, lane: number) => ({
-    x: w * (0.04 + (0.92 * slot) / Math.max(1, layout.longest - 1)),
+    x: w * (0.04 + (0.92 * slot) / Math.max(1, layout.span)),
     y: H / 2 + lane * laneGap,
   })
   const at = new Map(layout.spots)
@@ -88,7 +104,7 @@ export default function RouteMap({ idx, mine, best }: { idx: Index; mine: Node[]
   return (
     <figure className="routemap">
       <div className="routemap-scroll">
-        <div className="routemap-canvas" ref={canvasRef} style={{ minWidth: layout.longest * SLOT_W, height: H }}>
+        <div className="routemap-canvas" ref={canvasRef} style={{ minWidth: (layout.span + 1) * SLOT_W, height: H }}>
           <svg viewBox={`0 0 ${w || 100} ${H}`} aria-hidden>
             {layout.edges.map((e, i) => {
               return (
