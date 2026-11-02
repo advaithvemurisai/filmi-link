@@ -239,9 +239,21 @@ def main() -> None:
         ids.setdefault(int(fid), "")
 
     # Recent films' credits are still being filled in on TMDb, so refetch them rather than trust the cache.
-    fetch = lambda mid: get(f"/movie/{mid}", fresh=mid in recent, append_to_response="credits,alternative_titles")  # noqa: E731
+    def fetch(mid: int) -> dict | None:
+        try:
+            return get(f"/movie/{mid}", fresh=mid in recent, append_to_response="credits,alternative_titles")
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+            return None  # deleted or merged on TMDb since the listing was built
+
     with ThreadPoolExecutor(max_workers=12) as pool:
-        details = list(pool.map(fetch, ids))
+        fetched = list(pool.map(fetch, ids))
+    for mid, d in zip(ids, fetched):
+        if d is None:
+            kind = "LEGACY (used by a published puzzle)" if str(mid) in {str(f) for f in legacy} else "listed"
+            print(f"WARNING: TMDb has no film {mid} (404), skipping - {kind}")
+    details = [d for d in fetched if d is not None]
 
     # One person split across two TMDb ids breaks chains that should work, so hand-confirmed duplicates
     # (pipeline/person_merges.json: {"duplicate id": "canonical id"}) credit the canonical id. The duplicate
